@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configurationDescriptor version="100">
+  <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
+    <logicalFolder name="HeaderFiles"
+                   displayName="Header Files"
+                   projectFiles="true">
+      <itemPath>include/AtomicWord.h</itemPath>
+      <itemPath>include/NaryTrie.h</itemPath>
+      <itemPath>include/assert.h</itemPath>
+      <itemPath>include/errno.h</itemPath>
+      <itemPath>include/kernel.h</itemPath>
+      <itemPath>include/kernel_asm.h</itemPath>
+      <itemPath>include/stdarg.h</itemPath>
+      <itemPath>include/stdbool.h</itemPath>
+      <itemPath>include/stddef.h</itemPath>
+      <itemPath>include/stdint.h</itemPath>
+      <itemPath>include/string.h</itemPath>
+    </logicalFolder>
+    <logicalFolder name="ResourceFiles"
+                   displayName="Resource Files"
+                   projectFiles="true">
+    </logicalFolder>
+    <logicalFolder name="SourceFiles"
+                   displayName="Source Files"
+                   projectFiles="true">
+      <itemPath>src/Acpi.c</itemPath>
+      <itemPath>src/AddressSpace.c</itemPath>
+      <itemPath>src/Boot.c</itemPath>
+      <itemPath>src/Boot_asm.S</itemPath>
+      <itemPath>src/Cpu.c</itemPath>
+      <itemPath>src/CpuNode.c</itemPath>
+      <itemPath>src/Cpu_asm.S</itemPath>
+      <itemPath>src/ElfLoader.c</itemPath>
+      <itemPath>src/Formatter.c</itemPath>
+      <itemPath>src/LapicTimer.c</itemPath>
+      <itemPath>src/PhysicalMemory.c</itemPath>
+      <itemPath>src/Pic8259.c</itemPath>
+      <itemPath>src/PortE9Log.c</itemPath>
+      <itemPath>src/PriorityQueue.c</itemPath>
+      <itemPath>src/Rs232Log.c</itemPath>
+      <itemPath>src/SlabAllocator.c</itemPath>
+      <itemPath>src/Syscall.c</itemPath>
+      <itemPath>src/Task.c</itemPath>
+      <itemPath>src/Thread.c</itemPath>
+      <itemPath>src/Tsc.c</itemPath>
+      <itemPath>src/Util.c</itemPath>
+      <itemPath>src/Video.c</itemPath>
+    </logicalFolder>
+    <logicalFolder name="TestFiles"
+                   displayName="Test Files"
+                   projectFiles="false"
+                   kind="TEST_LOGICAL_FOLDER">
+    </logicalFolder>
+    <logicalFolder name="ExternalFiles"
+                   displayName="Important Files"
+                   projectFiles="false"
+                   kind="IMPORTANT_FILES_FOLDER">
+      <itemPath>Makefile</itemPath>
+    </logicalFolder>
+    <itemPath>doc/Design.asciidoc</itemPath>
+    <itemPath>README.asciidoc</itemPath>
+  </logicalFolder>
+  <projectmakefile>Makefile</projectmakefile>
+  <confs>
+    <conf name="Debug" type="1">
+      <toolsSet>
+        <compilerSet>GNU|GNU</compilerSet>
+        <dependencyChecking>true</dependencyChecking>
+        <rebuildPropChanged>false</rebuildPropChanged>
+      </toolsSet>
+      <compileType>
+        <cTool>
+          <architecture>1</architecture>
+          <incDir>
+            <pElem>include</pElem>
+          </incDir>
+          <commandLine>-Wall -std=gnu99</commandLine>
+        </cTool>
+      </compileType>
+      <item path="README.asciidoc" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="doc/Design.asciidoc" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="include/AtomicWord.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="include/NaryTrie.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="include/assert.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="include/errno.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="include/kernel.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="include/kernel_asm.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="include/stdarg.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="include/stdbool.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="include/stddef.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="include/stdint.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="include/string.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/Acpi.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/AddressSpace.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/Boot.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/Boot_asm.S" ex="false" tool="4" flavor2="0">
+      </item>
+      <item path="src/Cpu.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/CpuNode.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/Cpu_asm.S" ex="false" tool="4" flavor2="0">
+      </item>
+      <item path="src/ElfLoader.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/Formatter.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/LapicTimer.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/PhysicalMemory.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/Pic8259.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/PortE9Log.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/PriorityQueue.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/Rs232Log.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/SlabAllocator.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/Syscall.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/Task.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/Thread.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/Tsc.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/Util.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/Video.c" ex="false" tool="0" flavor2="0">
+      </item>
+    </conf>
+    <conf name="Release" type="1">
+      <toolsSet>
+        <compilerSet>default</compilerSet>
+        <dependencyChecking>true</dependencyChecking>
+        <rebuildPropChanged>false</rebuildPropChanged>
+      </toolsSet>
+      <compileType>
+        <cTool>
+          <developmentMode>5</developmentMode>
+          <architecture>1</architecture>
+          <incDir>
+            <pElem>include</pElem>
+          </incDir>
+          <commandLine>-Wall -std=gnu99</commandLine>
+        </cTool>
+        <ccTool>
+          <developmentMode>5</developmentMode>
+        </ccTool>
+        <fortranCompilerTool>
+          <developmentMode>5</developmentMode>
+        </fortranCompilerTool>
+        <asmTool>
+          <developmentMode>5</developmentMode>
+        </asmTool>
+      </compileType>
+      <item path="README.asciidoc" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="doc/Design.asciidoc" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="include/AtomicWord.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="include/NaryTrie.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="include/assert.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="include/errno.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="include/kernel.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="include/kernel_asm.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="include/stdarg.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="include/stdbool.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="include/stddef.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="include/stdint.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="include/string.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/Acpi.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/AddressSpace.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/Boot.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/Boot_asm.S" ex="false" tool="4" flavor2="0">
+      </item>
+      <item path="src/Cpu.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/CpuNode.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/Cpu_asm.S" ex="false" tool="4" flavor2="0">
+      </item>
+      <item path="src/ElfLoader.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/Formatter.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/LapicTimer.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/PhysicalMemory.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/Pic8259.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/PortE9Log.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/PriorityQueue.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/Rs232Log.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/SlabAllocator.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/Syscall.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/Task.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/Thread.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/Tsc.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/Util.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/Video.c" ex="false" tool="0" flavor2="0">
+      </item>
+    </conf>
+  </confs>
+</configurationDescriptor>

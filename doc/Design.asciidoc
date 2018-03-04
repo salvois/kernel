@@ -1,0 +1,736 @@
+ifdef::env-github[]
+:tip-caption: :bulb:
+:note-caption: :information_source:
+:important-caption: :heavy_exclamation_mark:
+:caution-caption: :fire:
+:warning-caption: :warning:
+:toc:
+:toc-placement!:
+endif::[]
+
+The FreeDOS-32 kernel design
+============================
+
+This document describes the overall design of the kernel.
+
+WARNING: Please note that this is an evolving document, the design
+is not stable and several features are not yet implemented.
+
+The kernel is based on a microkernel design, providing only very basic
+services such as address space management, thread scheduling and
+interprocess communication (IPC).
+
+The main system calls are the _send_ and _receive_, which task
+use to communicate with each other by sending small fixed-size messages.
+
+All other kernel services, such as creating tasks, allocating physical memory,
+programming timers or copying data between address spaces, are provided by
+per-CPU kernel threads, which are scheduled exactly like application
+threads.
+
+toc::[]
+
+
+Types of kernel objects
+-----------------------
+
+The kernel manages several types of objects, which can be accessed by
+applications through *capabilities*, which act as opaque identifiers or
+unforgeable pointers. A capability can also have permission flags and
+a data word called *badge* to further identify state. +
+Capabilities can be transferred between tasks, and multiple capabilities
+can refer to the same kernel object. When all such capabilities are deleted,
+the kernel object itself is deleted.
+
+Kernel objects are: *endpoints* to receive messages; *channels* to send
+messages to endpoints; memory *frames* representing pages of physical memory;
+*CPUs* representing logical processors on the system; *IRQs* to subscribe
+to hardware interrupts; *tasks* to provide unit of isolation to programs;
+*threads* to schedule execution flows on CPUs; *factories* to instantiate
+new kernel objects with a kernel memory quota; *proxies* to forward
+resolution of a kernel object allowing capability revocation.
+
+Endpoint
+~~~~~~~~
+An endpoint receives messages. It owns two priority queues: one for messages
+sent to this endpoint and one for threads waiting to receive messages.
+
+Tasks owning a capability to an endpoint with send permission can send
+messages to threads receiving on that endpoint. +
+Tasks owning a capability to an endpoint with receive permission can wait
+on the endpoint for incoming messages. +
+Tasks with a capability with receive permission can also create a badged
+version of the endpoint capability, in order to create a stateful
+connection and/or identify locally managed resources.
+
+Each task has a built-in default endpoint to listen for messages, but more
+endpoints can be created if needed. Each thread also has a built-in endpoint
+to receive responses to synchronous request messages.
+
+Besides being specified as target for message send or receive system calls,
+and endpoint supports the following operations:
+
+* Mint a capability with an attached badge and/or different permission flags.
+* Delete the capability to this endpoint.
+* Create a proxy to this endpoint.
+
+Channel
+~~~~~~~
+
+A channel is the kernel object that actually carries a message and is
+enqueued on an endpoint. Each channel stores a small fixed-size message
+in kernel memory. This means that only one message can be in flight on a channel
+at a given time. When attempting to send a message on a busy channel, the sender
+can either block or be returned an error.
+
+
+Each thread has a built-in channel to send synchronous (a.k.a. blocking,
+rendez-vous) messages. Responses to such messages are always sent to the
+built-in endpoint of the the originating thread.
+
+A task can also create multiple channels for asynchronous communication,
+where a client thread sends a request to a server endpoint, and receives
+responses on a designated endpoint, possibly the default built-in endpoint
+of the client task. Such response may go to a different thread than the one
+that sent the request. +
+A sender can ask the kernel to dynamically allocate a new channel whenever
+sending a request, or can use a preallocated set of channels for a more
+deterministic behavior.
+
+Server threads receiving a message through an endpoint are returned a temporary
+reply endpoint capability that must be used to send a response.
+
+Besides being specified in a send system call, a channel supports the
+following operations:
+
+* Cancel request (instantaneously if not yet received, otherwise signaled to server, needs send permission).
+* Save capabilities (only meaningful for servers).
+* Delete the capability to this channel.
+* Create a proxy to this channel.
+
+Frame
+~~~~~
+
+A frame kernel objects represents a page of physical memory.
+The kernel allocates a static array of frame descriptor objects during boot,
+one for each frame present on the system, using the smallest page size allowed
+by the architecture. Other frame objects can be dynamically allocated to
+track virtual memory mappings in case the same frame is mapped to multiple
+virtual memory pages.
+
+A frame object references the task owning the frame (if any, either for
+kernel memory and user memory), the virtual address the frame is mapped to
+in the owning task, and links to a list of other frame objects in case
+of multiple mappings.
+
+The following operations are allowed on frames:
+
+* Being specified as physical memory page for virtual memory mapping.
+* Delete the capability to this frame.
+* Create a proxy to this frame?
+
+CPU
+~~~
+
+A CPU object represents a logical processor of the system.
+CPU capabilities can be used to set thread affinity.
+
+IRQ
+~~~
+An IRQ object represents an interrupt number of the system.
+Tasks owning an IRQ capability can register to receive a message
+when the associated interrupt occurs.
+
+The following operations are allowed on IRQs:
+
+* Subscribe, providing a channel with send permission.
+* Unsubscribe.
+* Create a proxy to this IRQ.
+
+Task
+~~~~
+
+A task represents a unit of isolation (also known as a process), providing
+an address space and a capability space.
+
+Task objects support the following operations:
+
+* Create a child task.
+* Map a virtual memory page, providing a frame capability.
+* Unmap a contiguous region of virtual memory.
+* Allocate and map an anonymous contiguous region of virtual memory.
+* Create a proxy to this task.
+
+Thread
+~~~~~~
+
+A thread represents a unit of execution belonging to a task,
+storing a CPU context.
+
+The following operations are allowed on threads:
+
+* Read registers (needs read registers permission).
+* Write registers, including the instruction pointer and stack pointer
+  (needs write registers permission).
+* Set CPU affinity, specifying a CPU capability.
+* Set nominal priority level.
+* Set nice level.
+* Create a proxy to this thread.
+
+Factory
+~~~~~~~
+
+A factory creates kernel objects. Each factory has a configurable kernel
+memory quota, and specific permissions for the types of kernel objects
+that can be created (included other factories) and for changing the kernel
+memory quota.
+
+The following operations are allowed on factories:
+
+* Create a kernel object.
+* Get kernel memory quota and usage.
+* Set kernel memory quota.
+* Delete the capability to this factory.
+* Create a proxy to this factory.
+
+Proxy
+~~~~~
+
+A proxy forwards resolution of another kernel object, so that deleting
+a proxy effectively revokes access to all tasks owning a capability
+to that object via that proxy. This solves the revocation problem
+without traversing potentially large capability derivation trees when
+revoking all derived instances of a capability
+(see http://www.erights.org/elib/capability/duals/myths.html[Capability Myths
+Demolished by Mark S. Miller et al.)].
+
+The following operations are allowed on proxies:
+
+* Create a further proxy to this proxy.
+* Delete the capability to this proxy.
+
+
+Memory management
+-----------------
+
+The kernel manages allocation of physical memory with frame granularity,
+provides basic management of virtual memory by manipulating page tables and
+provides sub-page allocation by using slab allocators.
+
+
+Virtual memory mapping
+~~~~~~~~~~~~~~~~~~~~~~
+
+https://en.wikipedia.org/wiki/Meltdown_(security_vulnerability)[Currently],
+a split memory layout is used, where the "lower half" of the virtual address
+space is available to user mode programs, and the "higher half" is reserved
+for kernel access (actually, the current split on 32-bit is 3 GiB / 1 GiB
+respectively).
+
+The higher half has the same mappings in every possible address space,
+and contains the kernel code and data structures. To avoid changing
+these mappings, thus costly multi-CPU TLB shootdowns, and to minimize
+TLB pressure, as much physical memory as possible is permanently mapped to the
+higher half using the largest possible memory pages. On 32-bit with the 3/1
+GiB split, a few less than the first gigabyte of physical memory is mapped
+starting from virtual address 0xC0000000 using 4 MiB pages.
+
+A little of the higher half is left unmapped to allow per-CPU temporary
+mappings to let the kernel access non-permanently mapped physical memory.
+
+Temporary kernel memory mapping
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+As much as possible of physical memory is permanently mapped in the higher half
+kernel memory (896 MiB on IA-32, that is 224 page tables).
+
+For physical memory not permanently mapped in kernel memory, each CPU has
+a number of kernel pages reserved for temporary mappings, called the temporary
+mapping slots for that CPU (512 4 KiB slots for up to 32 logical CPUs, or 1024
+4 KiB slots for up to 16 logical CPUs on IA-32, that is 64 MiB, 16 page tables).
+
+On task switch, the temporary mappings are assumed to be clean, even if the
+respective page tables contain mappings, and the kernel will not attempt to
+access those pages. +
+Every time the kernel needs to access a frame requiring a temporary mapping,
+if the frame number is not the one of the last temporary mapping slot, the next
+slot is used. When all slots are filled, the TLB is invalidated and the first
+slot is used again. +
+This avoids costly individual TLB flushes and hopefully makes full TLB flushes rare.
+
+Physical memory allocation
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Each frame of physical memory is described by at least one frame kernel
+object, see <<Frame>>.
+
+The physical memory allocator operates in constant time, using a design
+inspired from http://g.oswego.edu/dl/html/malloc.html[Doug Lea's heap
+memory allocator]. Contiguous blocks of frames are segregated in free lists
+depending on the block sizes. To approximate a best-fit strategy while
+retaining O(1) operation and a small number of free lists, block sizes
+are classified by a power-of-two number of frames.
+
+When one or more contiguous frames need to be allocated, the physical
+memory allocator finds the a block in the free list containing the smallest
+block sizes greater than or equal to the required amount, then splits
+it if a larger block is found. Each free block uses frame kernel objects
+as a header and a footer to help coalescing free blocks in constant time.
+
+Several regions of physical memory are managed independently, in order
+to let the allocator pick memory with different features, such as low
+addresses that can be used for ISA DMA, memory permanently mapped in
+the higher half that is immediately accessible by the kernel, and all
+other memory available to user mode programs.
+
+Slab memory allocation
+~~~~~~~~~~~~~~~~~~~~~~
+
+Slab memory allocators are used to manage kernel memory with finer
+granularity than a frame. Each slab allocator manages objects of the same
+fixed size within a frame.
+
+When a new object is needed, the appropriate slab allocator attempts
+to reuse a previously freed object managed by the same allocator, or attempts
+to increase a "break" within the last obtained frame until it is full.
+When no more space is available, a new frame is requested to the physical
+memory allocator. All these steps require constant time.
+
+During tests, slab allocators have proven to provide good performance
+thanks to space locality.
+
+Capability space
+~~~~~~~~~~~~~~~~
+
+A capability referring to a kernel object is itself is a small kernel object.
+The so-called *capability address* is a positive integer key visible to user
+mode programs for a particular capability. The set of capabilities available
+to a task conceptually forms the *capability space* of that task.
+
+The capability space of a task is made up of one or more kernel mode memory
+pages managed by a per-task slab allocator, with an object size of 4 words.
+
+A capability address is derived from the actual kernel memory address of each
+capability object. Considering <<Virtual memory mapping, how the higher
+half kernel memory is mapped>>, to make a capability address a positive integer
+(so that negative integers can be used for error codes) it is enough to
+translate the kernel virtual memory address to physical address by subtracting
+the base address of the higher half.
+Thus, on 32-bit x86, a capability address is the virtual address of the capability
+minus 0xC0000000. Since all kernel objects are always multiple of 16 bytes,
+the lowest 4 bits of a capability address are always zero, and can be used
+to pack other information such as flags. The resulting capability space of a task
+is _sparse_, with capability address appearing as random integers.
+
+To resolve a capability, when receiving a capability address all the kernel
+needs to do is adding the higher half base address and checking if the resulting
+page is managed by a slab allocator owned by the calling task, and that that
+slab allocator is really managing capabilities. This information is conveniently
+saved in the <<Frame, frame  descriptor>> of the page.
+
+
+Thread scheduling
+-----------------
+
+The kernel aims to provide hard real-time behavior, where higher priority
+threads always preempt lower priority threads within a small bounded
+latency. 
+
+The central data structure is a single ready queue shared between all
+logical processors, not unlike http://ck.kolivas.org/patches/bfs/bfs-faq.txt[Con Colivas' BFS].
+This is in order to make sure that the highest priority ready threads are
+always executed on all available CPUs, without
+https://blog.acolyer.org/2016/04/26/the-linux-scheduler-a-decade-of-wasted-cores/[complex load balancing].
+
+After experimenting with several data structures to find the optimal
+priority queue (see https://github.com/salvois/cutil/) and testing
+"variable frequency" scheduling, to reduce processing time in the scheduler
+the final approach discards sorting threads by their cumulative "virtual run
+times" or "virtual deadlines", preferring variable-length high-resolution
+time slices with 256 priority levels. This allows implementing all priority
+queues with a https://en.wikipedia.org/wiki/Trie[bitwise trie] with at most
+8 levels, which exhibits very short worst case insertion and deletion times.
+
+To make the approach scalable, the idea of CPU nodes can be introduced,
+where each CPU node contains logical processors that share scheduling
+decisions, resembling a distributed system or a "multi-kernel" design.
+
+Priority and nice levels
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Each thread has a *priority*, ranging from 0 (highest priority) to 254 (lowest
+priority), 255 being reserved for the built-in idle thread. A thread with
+higher priority always preempt a thread with lower priority. Threads with
+the same priority are run round robin on the scheduler timer.
+A thread has a nominal priority and an effective priority. The *effective
+priority* may be different than the nominal priority when a thread receives
+a message from another thread, inheriting its (effective) priority.
+
+Whenever a new thread is made the current thread, the scheduler timer
+is reprogrammed. The scheduler timer is not started if the current thread
+is the idle thread, or there are no ready threads, or the first ready thread
+has a lower priority level than the current thread.
+This means that the CPU operates in tickless mode unless there are multiple
+threads with the same (effective) priority level.
+
+Each thread is given a time slice, whose length is inversely proportional
+to the *nice level* of the thread. When the time slice elapses, the thread
+is put on the back of the ready queue among threads with the same priority.
+For fairness, when the thread is preempted or blocks it is put on the front.
+This means that a thread that consumes little of its time slice before
+sleeping is very likely to run soon when it is awakened.
+
+Thread awakening and preemption
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Each CPU knows the thread it currently runs (possibly its idle thread)
+and the next thread candidate to run (possibly the current thread itself).
+The next thread can be selected by the CPU itself or another CPU when
+awakening threads (if the thread being awakened has to preempt a CPU),
+or by the scheduler.
+
+The ready queue does not contain current threads nor next threads.
+When a new thread becomes ready, all CPUs are scanned to check if one
+of them shall be preempted. If this is the case, the lowest priority
+running thread is enqueued on the ready queue and the new thread is
+selected as the next thread of that CPU, issuing a reschedule interprocessor
+interrupt (IPI) if needed. Otherwise, the new thread is just added to
+the ready queue. A reschedule IPI is also issued if the candidate CPU
+is running a thread with the same priority as the new thread, but it is
+operating in tickless mode, so that the scheduler timer can be enabled.
+
+The scheduler kicks in whenever a CPU is returning from an interrupt or a
+system call because either:
+
+ * the next thread is different than the current thread (a higher priority
+   thread has been awakened);
+ * the current thread is going to block;
+ * the time slice has elapsed (with a tiny tolerance to prevent running threads
+   with very small time slice left).
+
+
+Message passing
+---------------
+
+Communication between tasks (or interprocess communication, IPC) and
+invocation of kernel services revolve around message passing.
+
+Overview
+~~~~~~~~
+
+Message passing supports client-server interactions, where a client sends
+a *request* to a server and receives back a *response*, or one way notifications,
+where a producer sends a *notification* to a consumer without expecting a response.
+Messages have a maximum length of 16 machine words, where the first
+two words have a fixed use, subsequent words can be used for 0 to 7 two-word
+kernel-interpreted typed items, followed by 0 to 14 words of uninterpreted data.
+
+A client or a producer thread puts the message -a request or a notification
+respectively- in a user-mode buffer and invokes the *send* system call
+to send the message to a specified <<Endpoint, endpoint>> through the
+specified <<Channel, channel>>.
+A server or consumer thread, waiting on the endpoint through the *receive*
+system call, receives the message in a user-mode buffer.
+The actual transfer happens in the receive phase. A double copy is involved,
+but being messages small it should be advantageous over temporary mappings
+or specially allocated IPC buffers shared between user and kernel mode.
+
+For requests, the client may either block until it receives a response,
+or continue to run and receive the response asynchronously.
+The server processes the request, places the response in a user-mode buffer
+and invokes the *reply* system call to send the response through the originating
+channel. The client receives the message in a user-mode buffer, either
+synchronously after the send message system call returns, or asynchronously
+through the receive system call. When receiving responses asynchronously,
+the client task (perhaps a different thread than the one that sent the request)
+receives back an arbitrary word originally specified in the request, called
+the *client badge*, to identify the originating request.
+
+To exchange larger blocks of data, *shared memory* and *memory grants* can be used. +
+Memory pages are shared between tasks by transferring the capabilities to
+the mapped memory frames, allowing two tasks to perform zero-copy data exchange
+with page granularity and explicit mapping, in a way inspired by the
+http://sel4.systems/[seL4] microkernel. +
+A memory grant is a kernel object, inspired by
+http://wiki.minix3.org/doku.php?id=developersguide:memorygrants[Minix 3],
+that enables a task to access a memory area of another address space with byte
+granularity, using single copy and automatic <<Temporary kernel memory mapping,
+temporary mappings>>.
+The memory area may be non-contiguous, specified by an array of buffers.
+Each memory grant is specified in the user address space of the grantor, and is
+identified by a capability that can be transferred to grantees.
+
+A task may *transfer capabilities* to another task by including them in a
+message, either a request or a response. +
+On the receive side, a task specifies how many capabilities it is willing to accept.
+The kernel creates only that many capabilities during message reception,
+filling the corresponding positions with the resulting capability addresses.
+Any capabilities exceeding the limit are skipped, but servers can retrieve them
+later if needed, while they are lost in replies to clients. +
+New capabilities can be created on the fly when sending a message.
+For existing capabilities, a badge can be attached, either when sending requests
+or responses. For memory grants, a temporary capability can be created using
+a specific typed item in the message; this capability is automatically deleted
+when the response is sent.
+
+Messages sent by the kernel
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The kernel can initiate a message send in several circumstances: page faults,
+CPU exceptions, hardware interrupts.
+A kernel message signals an exceptional condition that is asynchronous by nature.
+
+For page faults and CPU exceptions, the faulting thread cannot continue execution
+until the fault is recovered. The faulting thread may not even have a valid stack.
+Thus, the message is either delivered to a separate handler thread, or to the
+faulting thread at a distinct instruction pointer and with a separate stack.
+For page faults, the handler receives the faulting IP, faulting SP and faulting address.
+
+Message layout
+~~~~~~~~~~~~~~
+
+A message is made up of a kernel-limited number of machine words (16 on x86,
+or 64 bytes). A message can contain either typed items, that are interpreted
+by the kernel, and untyped data, that is passed as is.
+
+The first word is the *message header*, containing:
+
+[%autowidth.spread,options="header"]
+|===============================================================================
+| Bits      | Meaning
+
+| 2..0      | Number of typed items (0 to 7).
+| 6..3      | Number of untyped words (0 to 14).
+| 9..7      | Number of capabilities to accept from response (0 to 7,
+              for synchronous and asynchronous requests only, otherwise ignored).
+| 10        | Cancel flag (_to be defined_).
+| 15..11    | Reserved, currently ignored.
+| 63/31..16 | User defined message label, not interpreted by the kernel.
+|===============================================================================
+
+For asynchronous requests, the second word contains the *client badge*,
+a user defined token that the kernel will return as is in the response to the
+client, to let it identify state. For other message types this is ignored.
+
+Zero or more typed items follow, each being two words long. +
+Zero or more untyped words complete the message data.
+
+Typed items
+~~~~~~~~~~~
+
+Typed items may be of the following.
+
+Capability to transfer
+^^^^^^^^^^^^^^^^^^^^^^
+Capabilities may be transferred in either requests or responses.
+On the sender side, a capability typed item represents a single capability
+in the capability space of the sender task, and may include an optional badge
+to create a minted capability on the fly.
+
+[%autowidth.spread,options="header"]
+|===============================================================================
+| Offset (words) | Bits    | Contents
+
+| 0              | 2:0     | Type, must be 0
+|                | 63/31:3 | Capability
+| 1              |         | Optional badge, or zero for no badge.
+|===============================================================================
+
+Temporary simple memory grant
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A client can include a temporary simple memory grant to allow a server to read
+or write a contiguous memory buffer until the request is replied.
+
+[%autowidth.spread,options="header"]
+|===============================================================================
+| Offset (words) | Bits    | Contents
+
+| 0              | 2:0     | Type, must be 1
+|                | 3       | Readable flag. If set, a grantee can read from the memory area.
+|                | 4       | Writable flag. If set, a grantee can write to the memory area.
+|                | 63/31:5 | Length of the buffer in bytes.
+| 1              |         | Base virtual address of the buffer, in the address space of the grantor.
+|===============================================================================
+
+Temporary vectored memory grant
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A client can include a temporary vectored memory grant to allow a server to read
+or write a non-contiguous memory area made up of an array of buffers,
+until the request is replied.
+Each buffer is described by a word with the base address in the address space
+of the grantor, followed by a word with the length of the buffer in bytes, like
+http://pubs.opengroup.org/onlinepubs/007904875/basedefs/sys/uio.h.html[struct iovec].
+
+[%autowidth.spread,options="header"]
+|===============================================================================
+| Offset (words) | Bits    | Contents
+
+| 0              | 2:0     | Type, must be 2
+|                | 3       | Readable flag. If set, a grantee can read from the memory area.
+|                | 4       | Writable flag. If set, a grantee can write to the memory area.
+|                | 63/31:5 | Number of buffers.
+| 1              |         | Base virtual address of the array of buffer descriptors,
+                             in the address space of the grantor.
+|===============================================================================
+
+
+System calls
+------------
+
+The kernel provides the following system calls:
+
+* *Send*: a thread sends a message to an endpoint.
+* *Cancel asynchronous message*: _to be defined_.
+* *Receive:* a thread listens on an endpoint for an incoming message,
+  and if no messages are pending it blocks.
+* *Reply*: a server thread sends a message in response to a request
+  and stays runnable.
+* *Reply and receive*: combines a reply followed by a receive in a
+  single efficient and atomic operation.
+* *Yield*: gives up the remaining time slice and schedules.
+
+All other kernel services are called by sending a message to specific
+endpoints managed by the kernel.
+
+Register mapping
+~~~~~~~~~~~~~~~~
+
+Parameters and return values of system calls go through CPU registers. +
+The following table shows how registers are mapped for parameters. When a
+parameter is not applicable for a certain system call, it is simply ignored.
+
+[%autowidth.spread,options="header"]
+|===============================================================================
+| IA-32 | Bits     | Contents
+
+| eax   | 3..0     | System call number.
+|       | 63/31..4 | Capability address to the channel to use (asynchronous
+                     request send), without the lowest 4 bits.
+| ebx   | 0        | Priority inheritance flag (send): set to pass the scheduling
+                     context of the sender to the receiver.
+|       | 1        | Non-blocking flag: set if send or receive shall fail instead of blocking.
+|       | 2        | Asynchronous flag (send): set if the message is being sent asynchronously.
+|       | 3        | Notification flag (send): set if the message being sent does not expect a response.
+|       | 63/31..4 | Capability address to the destination endpoint (send) or
+                     listen endpoint (receive), without the lowest 4 bits.
+| esi   |          | Virtual address of the user mode buffer containing the
+                     message to send and/or receive.
+| edi   | 31..4    | Capability address to the endpoint to receive the response
+                     (asynchronous request send) or to send the response (reply),
+                     without the lowest 4 bits.
+|===============================================================================
+
+Return values of system calls, if applicable, are returned on the default
+register used by the architecture for return values of regular functions
+(eax on IA-32).
+
+Send
+~~~~
+
+Sends a request or a notification to the specified endpoint, either
+synchronously or asynchronously.
+A requests expects a response, whereas a notification does not.
+
+When sending synchronously, the sender blocks until the message is replied
+(for requests) or delivered (for notifications), or, if non-blocking behavior
+has been selected, the send call aborts immediately if no receivers are
+waiting for messages.
+The response (for requests) is received by the originating thread upon
+return of the send system call.
+
+When sending asynchronously, the sender specifies the channel to use,
+or asks the kernel to dynamically allocate one. If the channel is busy
+(the previous asynchronous request has not yet been replied or the previous
+asynchronous notification has not yet been delivered) the send blocks,
+or, if non-blocking behavior has been selected, the call aborts immediately. +
+If the channel is not busy, the sender continues to be runnable and the
+response (for requests) is received asynchronously through the specified
+endpoint, possibly in a different thread.
+
+When sending with priority inheritance, the kernel assigns the same
+scheduling context (effective priority level, nice level and remaining time
+slice) as the sender to the first thread waiting for messages, or to the last
+thread that waited on the endpoint if no threads are waiting receive.
+If the request is synchronous request and there is a receiver waiting for
+messages, the kernel directly switches to it, bypassing the scheduler. 
+
+*Parameters:* System call number 1 (eax, bits 3..0).
+For asynchronous messages, channel to use or zero to ask the kernel
+to dynamically allocate one (eax, bits 31..4).
+Destination endpoint (ebx, bits 31..4).
+Priority inheritance flag (ebx, bit 0).
+Non-blocking flag (ebx, bit 1).
+Asynchronous flag (ebx, bit 2).
+Notification flag (ebx, bit 3).
+Buffer containing the message to send and, for synchronous requests,
+to receive the response (esi).
+For asynchronous requests, endpoint to receive the response (edi, bits 31..4).
+
+*Return value:* On success, for asynchronous requests or notifications with
+dynamically allocated channel, the capability address to the channel that can
+be used to cancel the message (_to be defined_); otherwise zero.
+On failure, a negative error code.
+
+Receive
+~~~~~~~
+
+Listens on the specified endpoint for incoming messages, either requests
+or notifications, synchronous or asynchronous, or responses to asynchronous
+requests.
+
+The receiver blocks until there is a message to receive, or returns immediately
+if non-blocking behavior has been requested.
+
+Upon system call return, the receiver gets a one-time capability representing
+the endpoint to send the response to, or a null capability (capability address
+zero) if no response is expected.
+
+*Parameters:* System call number 2 (eax, bits 3..0).
+Listen endpoint (ebx, bits 31..4).
+Non-blocking flag (ebx, bit 1).
+Buffer to receive the message (esi).
+
+*Return value:* On success, one-time capability to the endpoint to reply,or zero
+if the message does not expect a response. On failure, a negative error code.
+
+Reply
+~~~~~
+
+Sends a response to a request (no matter if synchronous or asynchronous),
+to the endpoint identified by the one-time capability returned by the receive
+system call. The capability to the reply endpoint, and any temporary capabilities
+created during the receive phase, are then deleted.
+The server stays runnable and executes according to scheduling decisions.
+
+*Parameters:* System call number 3 (eax, bits 3..0).
+Buffer containing the response to send (esi).
+Reply endpoint (edi, bits 31..4).
+
+*Return value:* On success, zero. On failure, a negative error code.
+
+Reply and receive
+~~~~~~~~~~~~~~~~~
+
+Combines a reply followed by a receive in a single efficient and atomic operation.
+
+If the originating request was synchronous with priority inheritance enabled,
+the kernel directly switches to the client bypassing the scheduler.
+
+*Parameters:* System call number 4 (eax, bits 3..0).
+Listen endpoint (ebx, bits 31..4).
+Non-blocking flag (ebx, bit 1).
+Buffer containing the response to send and to receive the incoming message (esi).
+Reply endpoint (edi, bits 31..4).
+
+*Return value:* Same as <<Receive>>.
+
+Yield
+~~~~~
+
+Gives up the remaining time slice and schedules.
+
+*Parameters:* System call number 5 (eax, bits 3..0).
+
+*Return value:* none.

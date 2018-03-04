@@ -1,0 +1,147 @@
+The FreeDOS-32 kernel
+=====================
+
+This repository is my ongoing experimentation on operating system internals,
+aiming at providing a kernel to the http://freedos-32.sourceforge.net[FreeDOS-32]
+project.
+
+The kernel is written primarily in C, with a small assembly portion,
+and currently targets the 32-bit x86 (IA-32) platform.
+
+The main goal of the project is having fun while learning. The QNX operating
+system and the evolving L4 microkernel family have been a big inspiration,
+together with the Linux kernel and its huge on-field experience.
+Many thanks to the https://wiki.osdev.org/Main_Page[OSDev] community,
+which I have been lurking for years.
+
+
+Architecture
+------------
+
+The kernel is based on a *microkernel design*, providing only very basic
+services such as address space management, thread scheduling and
+interprocess communication (IPC).
+
+A *task* represents an instance of a program, made of one or more *threads*
+which can execute concurrently. Each task has a set of *capabilities*
+which represent unforgeable keys to access kernel objects visible to that task.
+Capabilities can be transferred to other tasks. Each task has its own
+*address space*, to isolate its memory from unwanted access from other tasks.
+Threads can run in user mode, to take full advantage of task isolation
+features provided by the hardware, or in kernel mode to avoid mode switches
+and address space switches, trading security for performance.
+
+The main *system calls* are _send_ and _receive_,
+which tasks use to communicate with each other by sending small fixed-size
+messages through *channels*. Messages can be sent either asynchronously,
+with the sender continuing its execution and the response being received later,
+possibly in a different thread, or synchronously, with the sender blocking
+until the message has been delivered and the response is received.
+In order to avoid priority inversion problems and provide real-time behavior,
+*priority inheritance* can be enabled when sending messages.
+
+All other kernel services, such as creating tasks, allocating physical memory,
+programming timers or copying data between address spaces, are provided by
+per-CPU kernel threads, which are scheduled exactly like application
+threads. This allows core kernel services to be very short, with very low
+and bounded latency, while keeping a simple design which is essentially
+non-preemptible with a single kernel stack per CPU (event kernel).
+
+For further details, please see the documentation in the `doc` directory
+of the source tree.
+
+
+Current functionality
+---------------------
+
+This is far from being a fully functional kernel. The following functionality
+is implemented:
+
+* Booting from a Multiboot compliant boot loader such as GRUB Legacy or GRUB 2.
+* Allocating physical memory and supporting address spaces through virtual
+  memory paging (not to be confused with swapping).
+* Loading simple executables in ELF format and creating user mode tasks for them.
+* Scheduling threads on the logical processors of the system (SMP support),
+  using hard priorities for real-time preemption and variable-length
+  high-resolution time slices to implement nice levels within the same
+  priority level.
+* Switching between user mode and kernel mode (ring 3 vs. ring 0) by
+  interrupts and the `sysenter` instruction.
+
+Notably, interprocess communication through message passing is not yet
+available and is under development, and kernel services provided through
+kernel threads are not yet implemented (the former being a prerequisite
+of the latter).
+
+
+Testing the kernel
+------------------
+
+To test the running kernel, a 128 MiB hard disk image is available.
+It contains a single partition formatted as FAT32, with the GRUB 2 boot loader,
+a debug build of the kernel (with logging output to the COM1 serial port, can
+be very slow), a release build of the kernel and a couple of tests.
+
+The current debug binary of the kernel is around 70 kB, whereas a release build
+with logging and assertions disabled, and symbols stripped, is around 40 kB.
+
+The disk image is in raw (flat) format and can be mounted directly under Linux
+with a command like:
+
+  sudo mount kerneltest-flat.vmdk /mnt -o loop,offset=1048576 -o umask=000
+
+or it can be written to a physical disk, such as a USB pendrive,
+with a command like the following (replace `/dev/sdX` with the device name
+of your physical disk, *use at your own risk*):
+
+  sudo dd if=kerneltest-flat.vmdk of=/dev/sdX bs=1M
+
+or, thanks to the separate VMDK (VMware format) descriptor, it can be used in a
+virtual machine hypervisor such as https://www.virtualbox.org/[VirtualBox].
+The binary release already provides a VirtualBox machine description to make
+the latter easy.
+
+To compile the sources, gcc on Linux is currently required. A Makefile is
+provided, and the recommended build commands are `make clean && make Debug`
+and `make clean && make Release` to build a debug and a release binary,
+respectively.
+
+The current binary has been built with gcc 7.2 on Ubuntu 17.10 with 32-bit
+target, and has been tested both on VirtualBox and on real hardware on an
+i5-3570K-based desktop PC and an Atom N450-based netbook.
+
+Two trivial test programs are currently available, see the `test` directory
+of the source tree:
+
+* *Sysenter* calls the `sysenter` instruction in a loop, sandwitched between
+  `rdtsc` to measure the time to make a null system call from user mode.
+  The resulting number of TSC ticks is visible in `ebx` in the register dump
+  periodically printed on screen.
+* *EndlessLoop* does an endless computation in a loop to keep the processor
+  busy, to test thread scheduling. Every 4096 interrupts, the kernel will output
+  the cumulative number of TSC ticks consumed by the scheduler (see
+  `Cpu_handleSyscallOrInterrupt()` in `Cpu.c`). +
+  Note that you must use more instances of the test program than the number
+  of logical processor of your system, using the same priority level, otherwise
+  the scheduler timer will not fire (e.g. 8 instances on a quad-core processor).
+
+You can set thread priority and nice level of the test programs by passing the
+following optional arguments to the command line of the `module` GRUB command:
+
+* *priority* unsigned integer between 0 (highest priority) and 254 (lowest priority).
+* *nice* unsigned integer between 0 and 39, where normal middle value of 20
+  results in a time slice of 6 milliseconds.
+
+For example:
+
+  module /EndlessLoop priority 40 nice 4
+
+
+Licensing terms
+---------------
+
+GNU General Public License version 2, see the licensing headers on each file
+and the `LICENSE.txt` file. +
+Note that a program merely calling kernel services via system calls _does not_
+classify as a derivative work of the kernel, thus can be released under the
+licensing terms preferred by its authors or copyright holders.
