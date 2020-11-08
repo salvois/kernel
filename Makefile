@@ -21,8 +21,8 @@ CSOURCES = src/Boot.c \
   src/Util.c \
   src/Video.c
 OBJECTS = $(patsubst src/%.S, build/%.o, $(ASMSOURCES)) $(patsubst src/%.c, build/%.o, $(CSOURCES))
-TESTS_CFLAGS = -m32 -nostdlib -fno-asynchronous-unwind-tables -no-pie -fno-pie -s -Iinclude
-TESTS = build/EndlessLoop build/Sysenter
+DEMOS_CFLAGS = -m32 -nostdlib -fno-asynchronous-unwind-tables -no-pie -fno-pie -s -Iinclude
+DEMOS = build/EndlessLoop build/Sysenter
 
 .PHONY: all clean Release cleanRelease
 
@@ -45,18 +45,18 @@ build/%.o: src/%.c include/*.h
 build/%.o: src/%.S include/kernel_asm.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
-build/%: test/%.c
-	$(CC) $(TESTS_CFLAGS) $< -o $@
+build/%: demo/%.c
+	$(CC) $(DEMOS_CFLAGS) $< -o $@
 
-build/Sysenter: test/Sysenter.c
-	$(CC) $(TESTS_CFLAGS) -O3 $< -o $@
+build/Sysenter: demo/Sysenter.c
+	$(CC) $(DEMOS_CFLAGS) -O3 $< -o $@
 
-build/kernel.bin: $(OBJECTS) $(TESTS)
+build/kernel.bin: $(OBJECTS) $(DEMOS)
 	$(LD) -m elf_i386 -T link.ld $(OBJECTS) -o $@
 	objdump -D $@ > build/kernel.S
 	objdump -M intel -D $@ > build/kernel.asm
 	#strip $@
 	#sudo mount ~/VirtualBox\ VMs/kerneltest/kerneltest-flat.vmdk /mnt -o loop,offset=1048576 -o umask=000
 	#cp $@ /mnt
-	#cp $(TESTS) /mnt
+	#cp $(DEMOS) /mnt
 	#sudo umount /mnt
