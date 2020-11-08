@@ -8,6 +8,7 @@ CSOURCES = src/Boot.c \
   src/ElfLoader.c \
   src/Formatter.c \
   src/LapicTimer.c \
+  src/Libc.c \
   src/PhysicalMemory.c \
   src/Pic8259.c \
   src/PortE9Log.c \
@@ -23,8 +24,9 @@ CSOURCES = src/Boot.c \
 OBJECTS = $(patsubst src/%.S, build/%.o, $(ASMSOURCES)) $(patsubst src/%.c, build/%.o, $(CSOURCES))
 DEMOS_CFLAGS = -m32 -nostdlib -fno-asynchronous-unwind-tables -no-pie -fno-pie -s -Iinclude
 DEMOS = build/EndlessLoop build/Sysenter
+TESTS_CFLAGS = -Wall -m32 -std=gnu99 -pedantic-errors -nostdinc -fno-builtin -Iinclude
 
-.PHONY: all clean Release cleanRelease
+.PHONY: all clean Release cleanRelease build-tests test
 
 all: build/kernel.bin
 
@@ -38,6 +40,12 @@ cleanRelease: clean
 
 clean:
 	rm -f build/*
+	
+build-tests:
+	$(CC) $(TESTS_CFLAGS) src/Libc.c test/LibcTest.c test/test.c -o build/test
+	
+test: build-tests
+	./build/test
 
 build/%.o: src/%.c include/*.h
 	$(CC) $(CFLAGS) -c $< -o $@

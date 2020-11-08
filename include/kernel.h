@@ -40,19 +40,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "stdint.h"
 #include "errno.h"
 #include "string.h"
+#include "stdlib.h"
 #include "AtomicWord.h"
 #include "NaryTrie.h"
 
 /** Prints the specified message on screen and forcefully halts the system. */
 __attribute__((noreturn)) void panic(const char *format, ...);
-/** Converts a string to an integer value, similar the standard atoi. */
-unsigned stringToUnsigned(const char *str, size_t length);
-/** Returns a pseudo-random number between 0 and INT32_MAX. */
-int rand_r(uint32_t *seed);
-/** 64-bit xorshift* random number generator. */
-uint64_t xorshift64star(uint64_t *seed);
-/** Returns true if the specified value is aligned to the specified power-of-two alignment. */
-#define IS_ALIGNED(x, alignment) (((size_t) x & (alignment - 1)) == 0)
 /** Compiler hint to mark an expected condition. */
 #define LIKELY(x)   __builtin_expect((x), 1)
 /** Compiler hint to mark an unexpected condition. */

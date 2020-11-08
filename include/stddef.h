@@ -9,4 +9,7 @@
 typedef unsigned size_t;
 typedef int      ssize_t;
 
+/** Returns true if the specified value is aligned to the specified power-of-two alignment. */
+#define IS_ALIGNED(x, alignment) (((size_t) x & (alignment - 1)) == 0)
+
 #endif

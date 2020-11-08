@@ -348,12 +348,12 @@ void ElfLoader_fromExeMultibootModule(Task *task, uintptr_t begin, uint32_t end,
                 while (*s == ' ') s++;
                 token = s;
                 while ((*s >= '0' && *s <= '9')) s++;
-                if (s != token) priority = stringToUnsigned(token, s - token);
+                if (s != token) priority = atou(token, s - token);
             } else if (s - token == 4 && memcmp(token, "nice", 4) == 0) {
                 while (*s == ' ') s++;
                 token = s;
                 while ((*s >= '0' && *s <= '9')) s++;
-                if (s != token) nice = stringToUnsigned(token, s - token);
+                if (s != token) nice = atou(token, s - token);
             }
         } else {
             s++;

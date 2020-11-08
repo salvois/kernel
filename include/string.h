@@ -1,6 +1,8 @@
 #ifndef STRING_H_INCLUDED
 #define STRING_H_INCLUDED
 
+#include "stddef.h"
+
 /** Provides the standard memcmp functionality. */
 int memcmp(const void *s1, const void *s2, size_t n);
 /** Provides the standard memcpy functionality. */
