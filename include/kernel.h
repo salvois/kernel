@@ -831,6 +831,8 @@ union ThreadChecker {
     char wrongRegsBufOffset[offsetof(Thread, regsBuf) == THREAD_REGSBUF_OFFSET];
 }; 
 
+#define THREAD_IDLE_PRIORITY 255
+
 static inline bool Thread_isHigherPriority(const Thread *thread, const Thread *other) {
     return thread->queueNode.key < other->queueNode.key;
 }
@@ -1112,6 +1114,8 @@ void Cpu_sendRescheduleInterrupt(Cpu *cpu);
 void Cpu_sendTlbShootdownIpi(Cpu *cpu);
 void Cpu_switchToThread(Cpu *cpu, Thread *next);
 void Cpu_requestReschedule(Cpu *cpu);
+Thread *Cpu_findNextThreadAndUpdateReadyQueue(Cpu *cpu, bool timesliced);
+void Cpu_schedule(Cpu *cpu);
 void Cpu_exitKernel(Cpu *cpu);
 
 Cpu *CpuNode_findTargetCpu(const CpuNode *node, Cpu *lastCpu);

@@ -157,7 +157,59 @@ void Cpu_switchToThread(Cpu *cpu, Thread *next) {
     next->state = threadStateRunning;
     next->cpu = cpu;
     cpu->currentThread = next;
+    cpu->nextThread = next;
     cpu->tss.esp0 = (uint32_t) nr + sizeof(ThreadRegisters); // unused for kernel-mode threads
+}
+
+bool Cpu_accountTimesliceAndCheckExpiration(Cpu *cpu) {
+    uint64_t t = Tsc_read();
+    uint64_t dt = t - cpu->lastScheduleTime; // may overflow if we run for 10s of years :)
+    cpu->lastScheduleTime = t;
+    if (dt > UINT32_MAX) dt = UINT32_MAX;
+    unsigned dtns = Tsc_convertTicksToNanoseconds(&cpu->tsc, dt);
+    if (cpu->currentThread->timesliceRemaining <= TIMESLICE_TOLERANCE + dtns) {
+        cpu->currentThread->timesliceRemaining = Cpu_timesliceLengths[cpu->currentThread->nice];
+        return true;
+    }
+    cpu->currentThread->timesliceRemaining -= dtns;
+    return false; 
+}
+
+Thread *Cpu_findNextThreadAndUpdateReadyQueue(Cpu *cpu, bool timesliced) {
+    Thread *curr = cpu->currentThread;
+    PriorityQueue *readyQueue = &cpu->cpuNode->readyQueue;
+    if (cpu->nextThread != curr) {
+        if (curr->state != threadStateBlocked && curr != &cpu->idleThread)
+            PriorityQueue_insertFront(readyQueue, &curr->queueNode);
+        return cpu->nextThread;
+    }
+    if (curr->state == threadStateBlocked)
+        return !PriorityQueue_isEmpty(readyQueue)
+                ? Thread_fromQueueNode(PriorityQueue_poll(readyQueue))
+                : &cpu->idleThread;
+    assert(curr->state == threadStateRunning);
+    if (!PriorityQueue_isEmpty(readyQueue)) {
+        Thread *h = Thread_fromQueueNode(PriorityQueue_peek(readyQueue));
+        if (Thread_isHigherPriority(h, curr) || (Thread_isSamePriority(h, curr) && timesliced)) {
+            curr->state = threadStateReady;
+            return curr != &cpu->idleThread
+                    ? Thread_fromQueueNode(PriorityQueue_pollAndInsert(readyQueue, &curr->queueNode, !timesliced))
+                    : Thread_fromQueueNode(PriorityQueue_poll(readyQueue));
+        }
+    }
+    return curr;
+}
+
+void Cpu_setTimesliceTimer(Cpu *cpu) {
+    cpu->timesliceTimerEnabled = cpu->currentThread != &cpu->idleThread
+            && !PriorityQueue_isEmpty(&cpu->cpuNode->readyQueue)
+            && PriorityQueue_peek(&cpu->cpuNode->readyQueue)->key == cpu->currentThread->queueNode.key;
+    if (cpu->timesliceTimerEnabled) {
+        assert(cpu->currentThread->timesliceRemaining > TIMESLICE_TOLERANCE);
+        uint32_t ticks = LapicTimer_convertNanosecondsToTicks(&cpu->lapicTimer, cpu->currentThread->timesliceRemaining);
+        Log_printf("Cpu %d enabling timeslice in %d LAPIC timer ticks.\n", cpu->lapicId, ticks);
+        Cpu_writeLocalApic(lapicTimerInitialCount, ticks);
+    }
 }
 
 /**
@@ -214,68 +266,18 @@ void Cpu_switchToThread(Cpu *cpu, Thread *next) {
  * i5-3570K 8x EndlessLoop 2 CPUs: 588-599 TSC tick per interrupt
  * i5-3570K 8x EndlessLoop 3 CPUs: 641-688 TSC tick per interrupt
  */
-static void Cpu_schedule(Cpu *cpu) {
-    cpu->rescheduleNeeded = false;
-    PriorityQueue *rq = &cpu->cpuNode->readyQueue;
-    Thread *curr = cpu->currentThread;
-    // Compute elapsed time
-    bool timesliced = false;
-    uint64_t t = Tsc_read();
-    uint64_t dt = t - cpu->lastScheduleTime; // may overflow if we run for 10s of years :)
-    cpu->lastScheduleTime = t;
-    if (dt > UINT32_MAX) dt = UINT32_MAX;
-    unsigned dtns = Tsc_convertTicksToNanoseconds(&cpu->tsc, dt);
-    if (curr->timesliceRemaining <= TIMESLICE_TOLERANCE + dtns) {
-        timesliced = true;
-        curr->timesliceRemaining = Cpu_timesliceLengths[curr->nice];
-    } else {
-        curr->timesliceRemaining -= dtns;
-    }
+void Cpu_schedule(Cpu *cpu) {
     Spinlock_lock(&cpu->cpuNode->lock);
-    // Search for next thread
-    if (cpu->nextThread == curr) {
-        Thread *next = curr;
-        if (curr->state == threadStateBlocked) {
-            next = !PriorityQueue_isEmpty(rq) ? Thread_fromQueueNode(PriorityQueue_poll(rq)) : &cpu->idleThread;
-        } else {
-            assert(curr->state == threadStateRunning);
-            if (!PriorityQueue_isEmpty(rq)) {
-                Thread *h = Thread_fromQueueNode(PriorityQueue_peek(rq));
-                Log_printf("Cpu %d: curr=%d h=%d timesliced=%d.\n", cpu->lapicId, curr->queueNode.key, h->queueNode.key, timesliced);
-                if (Thread_isHigherPriority(h, curr) || (!Thread_isHigherPriority(curr, h) && timesliced)) {
-                    if (curr != &cpu->idleThread) {
-                        next = Thread_fromQueueNode(PriorityQueue_pollAndInsert(rq, &curr->queueNode, !timesliced));
-                    } else {
-                        next = Thread_fromQueueNode(PriorityQueue_poll(rq));
-                    }
-                    curr->state = threadStateReady;
-                }
-            } // otherwise do nothing, currentThread (== nextThread) is made running again
-        }
-        cpu->nextThread = next;
-    } else {
-        if (curr->state != threadStateBlocked && curr != &cpu->idleThread) {
-            PriorityQueue_insertFront(rq, &curr->queueNode);
-        }
+    cpu->rescheduleNeeded = false;
+    bool timesliced = Cpu_accountTimesliceAndCheckExpiration(cpu);
+    Thread *next = Cpu_findNextThreadAndUpdateReadyQueue(cpu, timesliced);
+    if (next != cpu->currentThread) {
+        Cpu_switchToThread(cpu, next);
+        Cpu_setTimesliceTimer(cpu);
+    } else if (timesliced) {
+        Cpu_setTimesliceTimer(cpu);
     }
-    if (cpu->nextThread != curr) {
-        Cpu_switchToThread(cpu, cpu->nextThread);
-        timesliced = true;
-    }
-    // Setup timeslice interrupt
-    if (timesliced) {
-        cpu->timesliceTimerEnabled = cpu->currentThread != &cpu->idleThread && !PriorityQueue_isEmpty(rq)
-                && PriorityQueue_peek(rq)->key == cpu->currentThread->queueNode.key;
-        Spinlock_unlock(&cpu->cpuNode->lock);
-        if (cpu->timesliceTimerEnabled) {
-            assert(cpu->currentThread->timesliceRemaining > TIMESLICE_TOLERANCE);
-            uint32_t ticks = LapicTimer_convertNanosecondsToTicks(&cpu->lapicTimer, cpu->currentThread->timesliceRemaining);
-            Log_printf("Cpu %d enabling timeslice in %d LAPIC timer ticks.\n", cpu->lapicId, ticks);
-            Cpu_writeLocalApic(lapicTimerInitialCount, ticks);
-        }
-    } else {
-        Spinlock_unlock(&cpu->cpuNode->lock);
-    }
+    Spinlock_unlock(&cpu->cpuNode->lock);
 }
 
 /**

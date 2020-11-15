@@ -66,7 +66,7 @@ __attribute__((section(".boot"))) static void Cpu_initialize(Cpu *cpu, size_t la
     // Initialize the idle thread
     cpu->idleThread.threadFunction = Cpu_idleThreadFunction;
     cpu->idleThread.cpu = cpu;
-    cpu->idleThread.priority = 255;
+    cpu->idleThread.priority = THREAD_IDLE_PRIORITY;
     cpu->idleThread.stack = (uint8_t *) &cpu->idleThread.regsBuf;
     cpu->idleThread.regs = (ThreadRegisters *) (cpu->idleThreadStack + CPU_IDLE_THREAD_STACK_SIZE - offsetof(ThreadRegisters, esp)); // esp and ss are not on the stack
     cpu->idleThread.regs->vector = THREADREGISTERS_VECTOR_CUSTOMDSES;
@@ -79,7 +79,7 @@ __attribute__((section(".boot"))) static void Cpu_initialize(Cpu *cpu, size_t la
     cpu->idleThread.regs->gs = kernelGS;
     cpu->idleThread.regs->esp = (uint32_t) cpu->idleThread.regs - offsetof(ThreadRegisters, es); // Cpu_returnToUserMode starts by popping es
     cpu->idleThread.state = threadStateRunning;
-    cpu->idleThread.queueNode.key = 0xFF;
+    cpu->idleThread.queueNode.key = THREAD_IDLE_PRIORITY;
     cpu->currentThread = &cpu->idleThread;
     cpu->nextThread = cpu->currentThread;
     // Initialize the TSS
