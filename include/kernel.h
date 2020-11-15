@@ -1100,8 +1100,6 @@ extern Cpu      *Cpu_cpus;
 extern unsigned  Cpu_timesliceLengths[NICE_LEVELS];
 extern uint8_t   Boot_kernelPageDirectoryPhysicalAddress;
 
-#include "hardware.h"
-
 __attribute__((section(".boot"))) void Cpu_loadCpuTables(Cpu *cpu);
 __attribute__((section(".boot"))) void Cpu_setupIdt();
 __attribute__((section(".boot"))) Cpu *Cpu_initializeCpuStructs(const MpConfigHeader *mpConfigHeader);
@@ -1112,6 +1110,7 @@ void Cpu_returnToUserMode(uintptr_t stackPointer); // from Cpu_asm.S
 void Cpu_setIsr(size_t vector, Isr isr, void *param);
 void Cpu_sendRescheduleInterrupt(Cpu *cpu);
 void Cpu_sendTlbShootdownIpi(Cpu *cpu);
+void Cpu_switchToThread(Cpu *cpu, Thread *next);
 void Cpu_requestReschedule(Cpu *cpu);
 void Cpu_exitKernel(Cpu *cpu);
 
@@ -1119,6 +1118,26 @@ Cpu *CpuNode_findTargetCpu(const CpuNode *node, Cpu *lastCpu);
 void CpuNode_addRunnableThread(CpuNode *node, Thread *thread);
 
 void Pic8259_initialize(uint8_t masterVector, uint8_t slaveVector);
+
+
+/******************************************************************************
+ * Address space
+ ******************************************************************************/
+
+typedef struct AddressSpace {
+    PageTableEntry root;
+    size_t         tlbShootdownPageCount;
+    uintptr_t      tlbShootdownPages[TASK_MAX_TLB_SHOOTDOWN_PAGES];
+    Frame         *shootdownFrames;
+} AddressSpace;
+
+int  AddressSpace_initialize(Task *task);
+int  AddressSpace_map(Task *task, uintptr_t virtualAddress, uintptr_t frame);
+int  AddressSpace_mapCopy(Task *destTask, uintptr_t destVirt, Task *srcTask, uintptr_t srcVirt);
+int  AddressSpace_mapFromNewFrame(Task *task, uintptr_t virtualAddress, PhysicalMemoryRegionType preferredRegion);
+void AddressSpace_unmap(Task *task, uintptr_t virtualAddress, uintptr_t payload);
+
+#include "hardware.h"
 
 
 /******************************************************************************
@@ -1140,43 +1159,6 @@ static inline uint32_t LapicTimer_getCurrentCount(LapicTimer *lt) {
 }
 
 __attribute__((section(".boot"))) void LapicTimer_initialize(LapicTimer *lt);
-
-
-/******************************************************************************
- * Address space
- ******************************************************************************/
-
-typedef struct AddressSpace {
-    PageTableEntry root;
-    size_t         tlbShootdownPageCount;
-    uintptr_t      tlbShootdownPages[TASK_MAX_TLB_SHOOTDOWN_PAGES];
-    Frame         *shootdownFrames;
-} AddressSpace;
-
-/** Switches the current processor to the specified address space. */
-static inline void AddressSpace_activate(AddressSpace *as) {
-    Log_printf("Switching to address space with root %p.\n", as->root);
-    asm volatile("mov %0, %%cr3" : : "r" (as->root) : "memory");
-}
-
-/** Invalidates all non-global TLB entries. */
-static inline void AddressSpace_invalidateTlb() {
-    asm volatile(
-    "    mov %%cr3, %%eax\n"
-    "    mov %%eax, %%cr3\n"
-    : : : "eax", "memory");
-}
-
-/** Invalidates a single TLB entry. */
-static inline void AddressSpace_invalidateTlbAddress(uintptr_t a) {
-    asm volatile("invlpg %0" : : "m" ((void *) a) : "memory");
-}
-
-int  AddressSpace_initialize(Task *task);
-int  AddressSpace_map(Task *task, uintptr_t virtualAddress, uintptr_t frame);
-int  AddressSpace_mapCopy(Task *destTask, uintptr_t destVirt, Task *srcTask, uintptr_t srcVirt);
-int  AddressSpace_mapFromNewFrame(Task *task, uintptr_t virtualAddress, PhysicalMemoryRegionType preferredRegion);
-void AddressSpace_unmap(Task *task, uintptr_t virtualAddress, uintptr_t payload);
 
 
 /******************************************************************************

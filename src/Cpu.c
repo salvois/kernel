@@ -124,7 +124,7 @@ __attribute__((fastcall)) static void Cpu_doNothingInterrupt(Cpu *cpu, void *par
  * Makes the specified thread the current thread of the specified CPU,
  * that is assumed to be the current CPU.
  */
-static void Cpu_switchToThread(Cpu *cpu, Thread *next) {
+void Cpu_switchToThread(Cpu *cpu, Thread *next) {
     Thread *curr = cpu->currentThread;
     Log_printf("Cpu %d switching from thread %p (prio=%d) to thread %p (prio=%d).\n", cpu->lapicId,
             curr, curr->queueNode.key,
@@ -133,22 +133,22 @@ static void Cpu_switchToThread(Cpu *cpu, Thread *next) {
     ThreadRegisters *nr = next->regs;
     if (UNLIKELY(nr->ldt != 0)) {
         // TODO: set GDT entry
-        asm volatile("lldt %0" : : "r" ((uint16_t) nr->ldt));
+        Cpu_loadLdt(nr->ldt);
     } else if (UNLIKELY(cr->ldt != 0)) {
-        asm volatile("lldt %0" : : "r" ((uint16_t) 0));
+        Cpu_loadLdt(0);
     }
     if (!curr->kernelThread) {
+        cr->fs = Cpu_readFs();
+        cr->gs = Cpu_readGs();
         if (!next->kernelThread) {
-            asm volatile("mov %%fs, %0" : "=g" (cr->fs));
-            asm volatile("mov %0, %%fs" : : "g" (nr->fs));
-            asm volatile("mov %%gs, %0" : "=g" (cr->gs));
-            asm volatile("mov %0, %%gs" : : "g" (nr->gs));
+            Cpu_writeFs(nr->fs);
+            Cpu_writeGs(nr->gs);
         } else {
-            asm volatile("mov %0, %%gs" : : "r" (kernelGS));
+            Cpu_writeGs(kernelGS);
         }
     } else if (!next->kernelThread) {
-        asm volatile("mov %0, %%fs" : : "g" (nr->fs));
-        asm volatile("mov %0, %%gs" : : "g" (nr->gs));
+        Cpu_writeFs(nr->fs);
+        Cpu_writeGs(nr->gs);
     }
     // TODO: optionally save FPU/SSE context
     if (next->task != curr->task) {

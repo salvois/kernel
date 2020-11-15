@@ -49,6 +49,30 @@ static inline void Cpu_writeMsr(uint32_t msr, uint64_t value) {
     asm volatile("wrmsr" : : "a" ((uint32_t) value), "d" ((uint32_t) (value >> 32)), "c" (msr));
 }
 
+static inline uint32_t Cpu_readFs() {
+    uint32_t v = 0;
+    asm volatile("mov %%fs, %0" : "=r" (v));
+    return v;
+}
+
+static inline void Cpu_writeFs(uint32_t value) {
+    asm volatile("mov %0, %%fs" : : "r" (value));
+}
+
+static inline uint32_t Cpu_readGs() {
+    uint32_t v;
+    asm volatile("mov %%gs, %0" : "=r" (v));
+    return v;
+}
+
+static inline void Cpu_writeGs(uint32_t value) {
+    asm volatile("mov %0, %%gs" : : "r" (value));
+}
+
+static inline void Cpu_loadLdt(uint32_t value) {
+    asm volatile("lldt %0" : : "r" ((uint16_t) value));
+}
+
 /** Gets the address that caused a page fault. */
 static inline void *Cpu_getFaultingAddress() {
     void *addr;
@@ -68,6 +92,25 @@ static inline Cpu *Cpu_getCurrent() {
     #error Unsupported word size
     #endif
     return (Cpu *) (sp & ~(CPU_STRUCT_SIZE - 1));
+}
+
+/** Switches the current processor to the specified address space. */
+static inline void AddressSpace_activate(AddressSpace *as) {
+    Log_printf("Switching to address space with root %p.\n", as->root);
+    asm volatile("mov %0, %%cr3" : : "r" (as->root) : "memory");
+}
+
+/** Invalidates all non-global TLB entries. */
+static inline void AddressSpace_invalidateTlb() {
+    asm volatile(
+    "    mov %%cr3, %%eax\n"
+    "    mov %%eax, %%cr3\n"
+    : : : "eax", "memory");
+}
+
+/** Invalidates a single TLB entry. */
+static inline void AddressSpace_invalidateTlbAddress(uintptr_t a) {
+    asm volatile("invlpg %0" : : "m" ((void *) a) : "memory");
 }
 
 #endif
