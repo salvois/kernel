@@ -69,7 +69,7 @@ static void CpuNodeTest_addRunnableThread_higherPriority() {
     initCpu(&cpu, true, 2, &currentThread);
     CpuNode node;
     initCpuNode(&node, &cpu, 1, 2);
-    FakeHardware_currentCpu = &cpu;
+    theFakeHardware = (FakeHardware) { .currentCpu = &cpu };
     
     CpuNode_addRunnableThread(&node, &newThread);
     
@@ -93,7 +93,7 @@ static void CpuNodeTest_addRunnableThread_higherPriorityWithNextThread() {
     cpu.nextThread = &nextThread;
     CpuNode node;
     initCpuNode(&node, &cpu, 1, 2);
-    FakeHardware_currentCpu = &cpu;
+    theFakeHardware = (FakeHardware) { .currentCpu = &cpu };
     
     CpuNode_addRunnableThread(&node, &newThread);
     
@@ -114,7 +114,7 @@ static void CpuNodeTest_addRunnableThread_lowerPriority() {
     initCpu(&cpu, true, 2, &currentThread);
     CpuNode node;
     initCpuNode(&node, &cpu, 1, 2);
-    FakeHardware_currentCpu = &cpu;
+    theFakeHardware = (FakeHardware) { .currentCpu = &cpu };
     
     CpuNode_addRunnableThread(&node, &newThread);
     
@@ -135,7 +135,7 @@ static void CpuNodeTest_addRunnableThread_samePriorityTimeSlicingDisabled() {
     initCpu(&cpu, true, 2, &currentThread);
     CpuNode node;
     initCpuNode(&node, &cpu, 1, 2);
-    FakeHardware_currentCpu = &cpu;
+    theFakeHardware = (FakeHardware) { .currentCpu = &cpu };
     
     CpuNode_addRunnableThread(&node, &newThread);
     

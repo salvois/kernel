@@ -43,11 +43,11 @@ static void CpuTest_switchToThread_sameAddressSpace() {
     initThread(&newThread, threadStateReady, 42, &currentTask);
     Cpu cpu;
     initCpu(&cpu, true, 3, &currentThread);
-    AddressSpace_activate(&dummyTaskToCheckAddressSpaceDidNotChange.addressSpace);
+    theFakeHardware = (FakeHardware) { .currentAddressSpace = &dummyTaskToCheckAddressSpaceDidNotChange.addressSpace };
     
     Cpu_switchToThread(&cpu, &newThread);
     
-    ASSERT(FakeHardware_currentAddressSpace == &dummyTaskToCheckAddressSpaceDidNotChange.addressSpace);
+    ASSERT(theFakeHardware.currentAddressSpace == &dummyTaskToCheckAddressSpaceDidNotChange.addressSpace);
 }
 
 static void CpuTest_switchToThread_differentAddressSpace() {
@@ -59,11 +59,11 @@ static void CpuTest_switchToThread_differentAddressSpace() {
     initThread(&newThread, threadStateReady, 42, &newTask);
     Cpu cpu;
     initCpu(&cpu, true, 3, &currentThread);
-    AddressSpace_activate(&currentTask.addressSpace);
+    theFakeHardware = (FakeHardware) { .currentAddressSpace = &currentTask.addressSpace };
     
     Cpu_switchToThread(&cpu, &newThread);
     
-    ASSERT(FakeHardware_currentAddressSpace == &newTask.addressSpace);
+    ASSERT(theFakeHardware.currentAddressSpace == &newTask.addressSpace);
 }
 
 static void CpuTest_switchToThread_userToUser() {
@@ -76,15 +76,14 @@ static void CpuTest_switchToThread_userToUser() {
     newThread.regs->gs = 422;
     Cpu cpu;
     initCpu(&cpu, true, 3, &currentThread);
-    Cpu_writeFs(1001);
-    Cpu_writeGs(1002);
+    theFakeHardware = (FakeHardware) { .fsRegister = 1001, .gsRegister = 1002 };
     
     Cpu_switchToThread(&cpu, &newThread);
     
     ASSERT(currentThread.regs->fs == 1001);
     ASSERT(currentThread.regs->gs == 1002);
-    ASSERT(Cpu_readFs() == 421);
-    ASSERT(Cpu_readGs() == 422);
+    ASSERT(theFakeHardware.fsRegister == 421);
+    ASSERT(theFakeHardware.gsRegister == 422);
 }
 
 static void CpuTest_switchToThread_userToKernel() {
@@ -96,15 +95,14 @@ static void CpuTest_switchToThread_userToKernel() {
     newThread.kernelThread = true;
     Cpu cpu;
     initCpu(&cpu, true, 3, &currentThread);
-    Cpu_writeFs(1001);
-    Cpu_writeGs(1002);
+    theFakeHardware = (FakeHardware) { .fsRegister = 1001, .gsRegister = 1002 };
     
     Cpu_switchToThread(&cpu, &newThread);
     
     ASSERT(currentThread.regs->fs == 1001);
     ASSERT(currentThread.regs->gs == 1002);
-    ASSERT(Cpu_readFs() == 1001);
-    ASSERT(Cpu_readGs() == kernelGS);
+    ASSERT(theFakeHardware.fsRegister == 1001);
+    ASSERT(theFakeHardware.gsRegister == kernelGS);
 }
 
 static void CpuTest_switchToThread_kernelToUser() {
@@ -118,15 +116,14 @@ static void CpuTest_switchToThread_kernelToUser() {
     newThread.regs->gs = 422;
     Cpu cpu;
     initCpu(&cpu, true, 3, &currentThread);
-    Cpu_writeFs(0);
-    Cpu_writeGs(kernelGS);
+    theFakeHardware = (FakeHardware) { .fsRegister = 0, .gsRegister = kernelGS };
     
     Cpu_switchToThread(&cpu, &newThread);
     
     ASSERT(currentThread.regs->fs == 0);
     ASSERT(currentThread.regs->gs == 0);
-    ASSERT(Cpu_readFs() == 421);
-    ASSERT(Cpu_readGs() == 422);
+    ASSERT(theFakeHardware.fsRegister == 421);
+    ASSERT(theFakeHardware.gsRegister == 422);
 }
 
 static void CpuTest_switchToThread_kernelToKernel() {
@@ -139,15 +136,15 @@ static void CpuTest_switchToThread_kernelToKernel() {
     newThread.kernelThread = true;
     Cpu cpu;
     initCpu(&cpu, true, 3, &currentThread);
-    Cpu_writeFs(0);
-    Cpu_writeGs(kernelGS);
+    const uint32_t unchangingValue = 1234;
+    theFakeHardware = (FakeHardware) { .fsRegister = unchangingValue, .gsRegister = unchangingValue };
     
     Cpu_switchToThread(&cpu, &newThread);
     
     ASSERT(currentThread.regs->fs == 0);
     ASSERT(currentThread.regs->gs == 0);
-    ASSERT(Cpu_readFs() == 0);
-    ASSERT(Cpu_readGs() == kernelGS);
+    ASSERT(theFakeHardware.fsRegister == unchangingValue);
+    ASSERT(theFakeHardware.gsRegister == unchangingValue);
 }
 
 static void CpuTest_switchToThread_withLocalDescriptorTable() {
@@ -159,11 +156,11 @@ static void CpuTest_switchToThread_withLocalDescriptorTable() {
     newThread.regs->ldt = 421;
     Cpu cpu;
     initCpu(&cpu, true, 3, &currentThread);
-    Cpu_loadLdt(1001);
+    theFakeHardware = (FakeHardware) { .ldtRegister = 1001 };
     
     Cpu_switchToThread(&cpu, &newThread);
     
-    ASSERT(FakeHardware_ldtRegister == 421);
+    ASSERT(theFakeHardware.ldtRegister == 421);
 }
 
 static void CpuTest_switchToThread_withoutLocalDescriptorTable() {
@@ -176,11 +173,11 @@ static void CpuTest_switchToThread_withoutLocalDescriptorTable() {
     newThread.regs->ldt = 0;
     Cpu cpu;
     initCpu(&cpu, true, 3, &currentThread);
-    Cpu_loadLdt(currentThread.regs->ldt);
+    theFakeHardware = (FakeHardware) { .ldtRegister = currentThread.regs->ldt };
     
     Cpu_switchToThread(&cpu, &newThread);
     
-    ASSERT(FakeHardware_ldtRegister == 0);
+    ASSERT(theFakeHardware.ldtRegister == 0);
 }
 
 void CpuTest_run() {
