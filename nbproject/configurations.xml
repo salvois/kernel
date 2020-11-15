@@ -24,9 +24,14 @@
     <logicalFolder name="SourceFiles"
                    displayName="Source Files"
                    projectFiles="true">
+      <logicalFolder name="f1" displayName="hardware" projectFiles="true">
+        <itemPath>src/hardware/hardware.h</itemPath>
+        <itemPath>src/hardware/ia32.h</itemPath>
+      </logicalFolder>
       <itemPath>src/Acpi.c</itemPath>
       <itemPath>src/AddressSpace.c</itemPath>
       <itemPath>src/Boot.c</itemPath>
+      <itemPath>src/Boot_Cpu.c</itemPath>
       <itemPath>src/Boot_asm.S</itemPath>
       <itemPath>src/Cpu.c</itemPath>
       <itemPath>src/CpuNode.c</itemPath>
@@ -53,7 +58,10 @@
                    projectFiles="false"
                    kind="TEST_LOGICAL_FOLDER">
       <logicalFolder name="f2" displayName="UtilTest" projectFiles="true" kind="TEST">
+        <itemPath>test/CpuNodeTest.c</itemPath>
         <itemPath>test/LibcTest.c</itemPath>
+        <itemPath>test/hardware/hardware.c</itemPath>
+        <itemPath>test/hardware/hardware.h</itemPath>
         <itemPath>test/test.c</itemPath>
         <itemPath>test/test.h</itemPath>
       </logicalFolder>
@@ -100,7 +108,7 @@
           </incDir>
         </ccTool>
         <linkerTool>
-          <output>${TESTDIR}/TestFiles/f2</output>
+          <output>build/test</output>
         </linkerTool>
       </folder>
       <item path="include/AtomicWord.h" ex="false" tool="3" flavor2="0">
@@ -132,6 +140,8 @@
       <item path="src/AddressSpace.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="src/Boot.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/Boot_Cpu.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="src/Boot_asm.S" ex="false" tool="4" flavor2="0">
       </item>
@@ -173,7 +183,17 @@
       </item>
       <item path="src/Video.c" ex="false" tool="0" flavor2="0">
       </item>
+      <item path="src/hardware/hardware.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/hardware/ia32.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="test/CpuNodeTest.c" ex="false" tool="0" flavor2="0">
+      </item>
       <item path="test/LibcTest.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="test/hardware/hardware.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="test/hardware/hardware.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="test/test.c" ex="false" tool="0" flavor2="0">
       </item>
@@ -254,6 +274,8 @@
       </item>
       <item path="src/Boot.c" ex="false" tool="0" flavor2="0">
       </item>
+      <item path="src/Boot_Cpu.c" ex="false" tool="0" flavor2="0">
+      </item>
       <item path="src/Boot_asm.S" ex="false" tool="4" flavor2="0">
       </item>
       <item path="src/Cpu.c" ex="false" tool="0" flavor2="0">
@@ -294,7 +316,17 @@
       </item>
       <item path="src/Video.c" ex="false" tool="0" flavor2="0">
       </item>
+      <item path="src/hardware/hardware.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/hardware/ia32.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="test/CpuNodeTest.c" ex="false" tool="0" flavor2="0">
+      </item>
       <item path="test/LibcTest.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="test/hardware/hardware.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="test/hardware/hardware.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="test/test.c" ex="false" tool="0" flavor2="0">
       </item>

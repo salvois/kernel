@@ -18,6 +18,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #ifndef KERNEL_ASM_H_INCLUDED
 #define	KERNEL_ASM_H_INCLUDED
 
+/** Size in bits of a machine word (32 or 64). */
+#define WORD_SIZE 32    
+
 #define CPU_LAPIC_VIRTUAL_ADDRESS 0xFEE00000 /* The page just before page tables */
 
 // These constants represents the enum Selector for use in assembly

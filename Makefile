@@ -1,7 +1,8 @@
-CFLAGS = -Wall -O3 -m32 -std=gnu99 -pedantic-errors -nostdinc -nostartfiles -nostdlib -fno-builtin -fno-asynchronous-unwind-tables -Iinclude
+CFLAGS = -Wall -O3 -m32 -std=gnu99 -pedantic-errors -nostdinc -nostartfiles -nostdlib -fno-builtin -fno-asynchronous-unwind-tables -Iinclude -Isrc/hardware
 ASMSOURCES = src/Boot_asm.S src/Cpu_asm.S
 CSOURCES = src/Boot.c \
   src/Acpi.c \
+  src/Boot_Cpu.c \
   src/AddressSpace.c \
   src/Cpu.c \
   src/CpuNode.c \
@@ -24,7 +25,7 @@ CSOURCES = src/Boot.c \
 OBJECTS = $(patsubst src/%.S, build/%.o, $(ASMSOURCES)) $(patsubst src/%.c, build/%.o, $(CSOURCES))
 DEMOS_CFLAGS = -m32 -nostdlib -fno-asynchronous-unwind-tables -no-pie -fno-pie -s -Iinclude
 DEMOS = build/EndlessLoop build/Sysenter
-TESTS_CFLAGS = -Wall -m32 -std=gnu99 -pedantic-errors -nostdinc -fno-builtin -Iinclude
+TESTS_CFLAGS = -Wall -g -m32 -std=gnu99 -pedantic-errors -nostdinc -fno-builtin -Iinclude -Itest/hardware
 
 .PHONY: all clean Release cleanRelease build-tests test
 
@@ -42,7 +43,7 @@ clean:
 	rm -f build/*
 	
 build-tests:
-	$(CC) $(TESTS_CFLAGS) src/Libc.c test/LibcTest.c test/test.c -o build/test
+	$(CC) $(TESTS_CFLAGS) src/Cpu.c src/CpuNode.c src/Libc.c src/PriorityQueue.c test/hardware/hardware.c test/LibcTest.c test/CpuNodeTest.c test/test.c -o build/test
 	
 test: build-tests
 	./build/test
