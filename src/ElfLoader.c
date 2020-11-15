@@ -374,7 +374,7 @@ void ElfLoader_fromExeMultibootModule(Task *task, uintptr_t begin, uint32_t end,
                 i, phdr->p_offset, phdr->p_vaddr, phdr->p_paddr, phdr->p_filesz, phdr->p_memsz, phdr->p_flags, phdr->p_align);
         for (size_t j = 0; j < phdr->p_memsz; j += PAGE_SIZE) {
             if (j < phdr->p_filesz) {
-                AddressSpace_map(task, phdr->p_vaddr + j, (begin + j) >> PAGE_SHIFT);
+                AddressSpace_map(task, phdr->p_vaddr + j, (begin + phdr->p_offset + j) >> PAGE_SHIFT);
                 if (j + PAGE_SIZE >= phdr->p_filesz) {
                     //memzero(phdr->p_vaddr + j);
                 }
