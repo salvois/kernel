@@ -446,6 +446,61 @@ static void CpuTest_accountTimesliceAndCheckExpiration_runningForLongTime() {
     ASSERT(currentThread.timesliceRemaining == Cpu_timesliceLengths[20]);
 }
 
+static void CpuTest_setTimesliceTimer_idle() {
+    Cpu cpu;
+    initCpu(&cpu, true, 3, &cpu.idleThread);
+    CpuNode node;
+    initCpuNode(&node, &cpu, 1, 3);
+    const uint32_t unchangingValue = 1234;
+    theFakeHardware = (FakeHardware) { .lapicTimerInitialCount = unchangingValue };
+    
+    Cpu_setTimesliceTimer(&cpu);
+    
+    ASSERT(cpu.timesliceTimerEnabled == false);
+    ASSERT(theFakeHardware.lapicTimerInitialCount == unchangingValue);
+}
+
+static void CpuTest_setTimesliceTimer_lowerPriorityReeadyThread() {
+    Task unimportantTask;
+    Thread currentThread;
+    initThread(&currentThread, threadStateRunning, 42, &unimportantTask);
+    Thread readyThread;
+    initThread(&readyThread, threadStateReady, 100, &unimportantTask);
+    Cpu cpu;
+    initCpu(&cpu, true, 3, &currentThread);
+    CpuNode node;
+    initCpuNode(&node, &cpu, 1, 3);
+    PriorityQueue_insert(&node.readyQueue, &readyThread.queueNode);
+    const uint32_t unchangingValue = 1234;
+    theFakeHardware = (FakeHardware) { .lapicTimerInitialCount = unchangingValue };
+    
+    Cpu_setTimesliceTimer(&cpu);
+    
+    ASSERT(cpu.timesliceTimerEnabled == false);
+    ASSERT(theFakeHardware.lapicTimerInitialCount == unchangingValue);
+}
+
+static void CpuTest_setTimesliceTimer_samePriorityReeadyThread() {
+    Task unimportantTask;
+    Thread currentThread;
+    initThread(&currentThread, threadStateRunning, 42, &unimportantTask);
+    currentThread.timesliceRemaining = 4000000;
+    Thread readyThread;
+    initThread(&readyThread, threadStateReady, 42, &unimportantTask);
+    Cpu cpu;
+    initCpu(&cpu, true, 3, &currentThread);
+    CpuNode node;
+    initCpuNode(&node, &cpu, 1, 3);
+    PriorityQueue_insert(&node.readyQueue, &readyThread.queueNode);
+    cpu.lapicTimer = (LapicTimer) { .ticksPerNs = 1 << 23 };
+    theFakeHardware = (FakeHardware) { .lapicTimerInitialCount = 0 };
+    
+    Cpu_setTimesliceTimer(&cpu);
+    
+    ASSERT(cpu.timesliceTimerEnabled == true);
+    ASSERT(theFakeHardware.lapicTimerInitialCount == 4000000);
+}
+
 void CpuTest_run() {
     RUN_TEST(CpuTest_switchToThread_invariants);
     RUN_TEST(CpuTest_switchToThread_sameAddressSpace);
@@ -470,4 +525,7 @@ void CpuTest_run() {
     RUN_TEST(CpuTest_accountTimesliceAndCheckExpiration_notExpired);
     RUN_TEST(CpuTest_accountTimesliceAndCheckExpiration_expired);
     RUN_TEST(CpuTest_accountTimesliceAndCheckExpiration_runningForLongTime);
+    RUN_TEST(CpuTest_setTimesliceTimer_idle);
+    RUN_TEST(CpuTest_setTimesliceTimer_lowerPriorityReeadyThread);
+    RUN_TEST(CpuTest_setTimesliceTimer_samePriorityReeadyThread);
 }

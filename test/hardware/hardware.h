@@ -3,7 +3,17 @@
 
 typedef struct FakeHardware {
     Cpu *currentCpu;
-    uint32_t localApicRegisters[1024];
+    uint32_t lapicEoi;
+    uint32_t lapicSpuriousInterrupt;
+    uint32_t lapicInterruptCommandLow;
+    uint32_t lapicInterruptCommandHigh;
+    uint32_t lapicTimerLvt;
+    uint32_t lapicPerformanceCounterLvt;
+    uint32_t lapicLint0Lvt;
+    uint32_t lapicLint1Lvt;
+    uint32_t lapicTimerInitialCount;
+    uint32_t lapicTimerCurrentCount;
+    uint32_t lapicTimerDivider;
     AddressSpace *currentAddressSpace;
     uint32_t fsRegister;
     uint32_t gsRegister;
@@ -13,13 +23,8 @@ typedef struct FakeHardware {
 
 extern FakeHardware theFakeHardware;
 
-static inline uint32_t Cpu_readLocalApic(size_t offset) {
-    return theFakeHardware.localApicRegisters[offset / sizeof(uint32_t)];
-}
-
-static inline void Cpu_writeLocalApic(size_t offset, uint32_t value) {
-    theFakeHardware.localApicRegisters[offset / sizeof(uint32_t)] = value;
-}
+uint32_t Cpu_readLocalApic(size_t offset);
+void Cpu_writeLocalApic(size_t offset, uint32_t value);
 
 static inline void *Cpu_getFaultingAddress() {
     return (void *)0;

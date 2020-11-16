@@ -1109,6 +1109,7 @@ void Cpu_switchToThread(Cpu *cpu, Thread *next);
 void Cpu_requestReschedule(Cpu *cpu);
 bool Cpu_accountTimesliceAndCheckExpiration(Cpu *cpu);
 Thread *Cpu_findNextThreadAndUpdateReadyQueue(Cpu *cpu, bool timesliced);
+void Cpu_setTimesliceTimer(Cpu *cpu);
 void Cpu_schedule(Cpu *cpu);
 void Cpu_exitKernel(Cpu *cpu);
 
