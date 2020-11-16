@@ -384,6 +384,68 @@ static void CpuTest_findNextThreadAndUpdateReadyQueue_idleWithReadyThread() {
     ASSERT(PriorityQueue_isEmpty(&node.readyQueue));
 }
 
+static void CpuTest_accountTimesliceAndCheckExpiration_notExpired() {
+    Task unimportantTask;
+    Thread currentThread;
+    initThread(&currentThread, threadStateRunning, 42, &unimportantTask);
+    currentThread.timesliceRemaining = 6000000;
+    Cpu cpu;
+    initCpu(&cpu, true, 3, &currentThread);
+    cpu.tsc = (Tsc) { .nsPerTick = 1 << 20 };
+    cpu.lastScheduleTime = 1000;
+    CpuNode node;
+    initCpuNode(&node, &cpu, 1, 3);
+    PriorityQueue_insert(&node.readyQueue, &currentThread.queueNode);
+    theFakeHardware = (FakeHardware) { .tscRegister = 4000000 };
+    
+    bool timesliced = Cpu_accountTimesliceAndCheckExpiration(&cpu);
+    
+    ASSERT(timesliced == false);
+    ASSERT(currentThread.timesliceRemaining == 2001000);
+}
+
+static void CpuTest_accountTimesliceAndCheckExpiration_expired() {
+    Task unimportantTask;
+    Thread currentThread;
+    initThread(&currentThread, threadStateRunning, 42, &unimportantTask);
+    currentThread.timesliceRemaining = 6000000;
+    currentThread.nice = 20;
+    Cpu cpu;
+    initCpu(&cpu, true, 3, &currentThread);
+    cpu.tsc = (Tsc) { .nsPerTick = 1 << 20 };
+    cpu.lastScheduleTime = 1000;
+    CpuNode node;
+    initCpuNode(&node, &cpu, 1, 3);
+    PriorityQueue_insert(&node.readyQueue, &currentThread.queueNode);
+    theFakeHardware = (FakeHardware) { .tscRegister = 5995000 };
+    
+    bool timesliced = Cpu_accountTimesliceAndCheckExpiration(&cpu);
+    
+    ASSERT(timesliced == true);
+    ASSERT(currentThread.timesliceRemaining == Cpu_timesliceLengths[20]);
+}
+
+static void CpuTest_accountTimesliceAndCheckExpiration_runningForLongTime() {
+    Task unimportantTask;
+    Thread currentThread;
+    initThread(&currentThread, threadStateRunning, 42, &unimportantTask);
+    currentThread.timesliceRemaining = 6000000;
+    currentThread.nice = 20;
+    Cpu cpu;
+    initCpu(&cpu, true, 3, &currentThread);
+    cpu.tsc = (Tsc) { .nsPerTick = 1 << 20 };
+    cpu.lastScheduleTime = 1000;
+    CpuNode node;
+    initCpuNode(&node, &cpu, 1, 3);
+    PriorityQueue_insert(&node.readyQueue, &currentThread.queueNode);
+    theFakeHardware = (FakeHardware) { .tscRegister = 1000000000000ULL };
+    
+    bool timesliced = Cpu_accountTimesliceAndCheckExpiration(&cpu);
+    
+    ASSERT(timesliced == true);
+    ASSERT(currentThread.timesliceRemaining == Cpu_timesliceLengths[20]);
+}
+
 void CpuTest_run() {
     RUN_TEST(CpuTest_switchToThread_invariants);
     RUN_TEST(CpuTest_switchToThread_sameAddressSpace);
@@ -405,4 +467,7 @@ void CpuTest_run() {
     RUN_TEST(CpuTest_findNextThreadAndUpdateReadyQueue_runningWithSamePriorityReadyThread);
     RUN_TEST(CpuTest_findNextThreadAndUpdateReadyQueue_timeslicedWithSamePriorityReadyThread);
     RUN_TEST(CpuTest_findNextThreadAndUpdateReadyQueue_idleWithReadyThread);
+    RUN_TEST(CpuTest_accountTimesliceAndCheckExpiration_notExpired);
+    RUN_TEST(CpuTest_accountTimesliceAndCheckExpiration_expired);
+    RUN_TEST(CpuTest_accountTimesliceAndCheckExpiration_runningForLongTime);
 }

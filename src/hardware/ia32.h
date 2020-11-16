@@ -94,6 +94,13 @@ static inline Cpu *Cpu_getCurrent() {
     return (Cpu *) (sp & ~(CPU_STRUCT_SIZE - 1));
 }
 
+/** Reads the current value of the TSC. */
+static inline uint64_t Tsc_read() {
+    uint32_t a, d;
+    asm volatile("rdtsc" : "=a" (a), "=d" (d));
+    return (uint64_t) (a) | ((uint64_t) (d) << 32);
+}
+
 /** Switches the current processor to the specified address space. */
 static inline void AddressSpace_activate(AddressSpace *as) {
     Log_printf("Switching to address space with root %p.\n", as->root);

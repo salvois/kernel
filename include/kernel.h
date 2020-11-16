@@ -906,15 +906,8 @@ typedef struct Tsc {
 } Tsc;
 
 /** Converts the specified count of ticks of the TSC to nanoseconds. */
-static inline uint32_t Tsc_convertTicksToNanoseconds(const Tsc *tsc, uint32_t ticks) {
+static inline uint64_t Tsc_convertTicksToNanoseconds(const Tsc *tsc, uint32_t ticks) {
     return mul(ticks, tsc->nsPerTick) >> 20;
-}
-
-/** Reads the current value of the TSC. */
-static inline uint64_t Tsc_read() {
-    uint32_t a, d;
-    asm volatile("rdtsc" : "=a" (a), "=d" (d));
-    return (uint64_t) (a) | ((uint64_t) (d) << 32);
 }
 
 __attribute__((section(".boot"))) void Tsc_initialize(Tsc *tsc);
@@ -1114,6 +1107,7 @@ void Cpu_sendRescheduleInterrupt(Cpu *cpu);
 void Cpu_sendTlbShootdownIpi(Cpu *cpu);
 void Cpu_switchToThread(Cpu *cpu, Thread *next);
 void Cpu_requestReschedule(Cpu *cpu);
+bool Cpu_accountTimesliceAndCheckExpiration(Cpu *cpu);
 Thread *Cpu_findNextThreadAndUpdateReadyQueue(Cpu *cpu, bool timesliced);
 void Cpu_schedule(Cpu *cpu);
 void Cpu_exitKernel(Cpu *cpu);

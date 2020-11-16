@@ -8,6 +8,7 @@ typedef struct FakeHardware {
     uint32_t fsRegister;
     uint32_t gsRegister;
     uint32_t ldtRegister;
+    uint64_t tscRegister;
 } FakeHardware;
 
 extern FakeHardware theFakeHardware;
@@ -50,6 +51,10 @@ static inline Cpu *Cpu_getCurrent() {
 
 static inline void AddressSpace_activate(AddressSpace *as) {
     theFakeHardware.currentAddressSpace = as;
+}
+
+static inline uint64_t Tsc_read() {
+    return theFakeHardware.tscRegister;
 }
 
 #endif

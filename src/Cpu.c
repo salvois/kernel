@@ -166,12 +166,12 @@ bool Cpu_accountTimesliceAndCheckExpiration(Cpu *cpu) {
     uint64_t dt = t - cpu->lastScheduleTime; // may overflow if we run for 10s of years :)
     cpu->lastScheduleTime = t;
     if (dt > UINT32_MAX) dt = UINT32_MAX;
-    unsigned dtns = Tsc_convertTicksToNanoseconds(&cpu->tsc, dt);
-    if (cpu->currentThread->timesliceRemaining <= TIMESLICE_TOLERANCE + dtns) {
+    uint64_t dtNanoseconds = Tsc_convertTicksToNanoseconds(&cpu->tsc, dt);
+    if (cpu->currentThread->timesliceRemaining <= TIMESLICE_TOLERANCE + dtNanoseconds) {
         cpu->currentThread->timesliceRemaining = Cpu_timesliceLengths[cpu->currentThread->nice];
         return true;
     }
-    cpu->currentThread->timesliceRemaining -= dtns;
+    cpu->currentThread->timesliceRemaining -= dtNanoseconds;
     return false; 
 }
 
