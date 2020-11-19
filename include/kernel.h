@@ -117,7 +117,7 @@ static inline void PriorityQueue_insert(PriorityQueue *queue, PriorityQueueNode 
 
 static inline void PriorityQueue_insertFront(PriorityQueue *queue, PriorityQueueNode *x) {
     PriorityQueueImpl_insert(&queue->impl, &x->n, true);
-    if (queue->min == NULL || x->key < queue->min->key) {
+    if (queue->min == NULL || x->key <= queue->min->key) {
         queue->min = x;
     }
 }
