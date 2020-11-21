@@ -5,6 +5,7 @@
                    displayName="Header Files"
                    projectFiles="true">
       <itemPath>include/AtomicWord.h</itemPath>
+      <itemPath>include/LinkedList.h</itemPath>
       <itemPath>include/NaryTrie.h</itemPath>
       <itemPath>include/assert.h</itemPath>
       <itemPath>include/errno.h</itemPath>
@@ -40,6 +41,7 @@
       <itemPath>src/Formatter.c</itemPath>
       <itemPath>src/LapicTimer.c</itemPath>
       <itemPath>src/Libc.c</itemPath>
+      <itemPath>src/LinkedList.c</itemPath>
       <itemPath>src/PhysicalMemory.c</itemPath>
       <itemPath>src/Pic8259.c</itemPath>
       <itemPath>src/PortE9Log.c</itemPath>
@@ -61,6 +63,7 @@
         <itemPath>test/CpuNodeTest.c</itemPath>
         <itemPath>test/CpuTest.c</itemPath>
         <itemPath>test/LibcTest.c</itemPath>
+        <itemPath>test/LinkedListTest.c</itemPath>
         <itemPath>test/PriorityQueueTest.c</itemPath>
         <itemPath>test/hardware/hardware.c</itemPath>
         <itemPath>test/hardware/hardware.h</itemPath>
@@ -115,6 +118,8 @@
       </folder>
       <item path="include/AtomicWord.h" ex="false" tool="3" flavor2="0">
       </item>
+      <item path="include/LinkedList.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="include/NaryTrie.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="include/assert.h" ex="false" tool="3" flavor2="0">
@@ -161,6 +166,8 @@
       </item>
       <item path="src/Libc.c" ex="false" tool="0" flavor2="0">
       </item>
+      <item path="src/LinkedList.c" ex="false" tool="0" flavor2="0">
+      </item>
       <item path="src/PhysicalMemory.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="src/Pic8259.c" ex="false" tool="0" flavor2="0">
@@ -194,6 +201,8 @@
       <item path="test/CpuTest.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="test/LibcTest.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="test/LinkedListTest.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="test/PriorityQueueTest.c" ex="false" tool="0" flavor2="0">
       </item>
@@ -252,6 +261,8 @@
       </folder>
       <item path="include/AtomicWord.h" ex="false" tool="3" flavor2="0">
       </item>
+      <item path="include/LinkedList.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="include/NaryTrie.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="include/assert.h" ex="false" tool="3" flavor2="0">
@@ -298,6 +309,8 @@
       </item>
       <item path="src/Libc.c" ex="false" tool="0" flavor2="0">
       </item>
+      <item path="src/LinkedList.c" ex="false" tool="0" flavor2="0">
+      </item>
       <item path="src/PhysicalMemory.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="src/Pic8259.c" ex="false" tool="0" flavor2="0">
@@ -331,6 +344,8 @@
       <item path="test/CpuTest.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="test/LibcTest.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="test/LinkedListTest.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="test/PriorityQueueTest.c" ex="false" tool="0" flavor2="0">
       </item>

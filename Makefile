@@ -10,6 +10,7 @@ CSOURCES = src/Boot.c \
   src/Formatter.c \
   src/LapicTimer.c \
   src/Libc.c \
+  src/LinkedList.c \
   src/PhysicalMemory.c \
   src/Pic8259.c \
   src/PortE9Log.c \
@@ -43,7 +44,7 @@ clean:
 	rm -f build/*
 	
 build-tests:
-	$(CC) $(TESTS_CFLAGS) src/Cpu.c src/CpuNode.c src/Libc.c src/PriorityQueue.c test/hardware/hardware.c test/LibcTest.c test/CpuNodeTest.c test/CpuTest.c test/PriorityQueueTest.c test/test.c -o build/test
+	$(CC) $(TESTS_CFLAGS) src/Cpu.c src/CpuNode.c src/Libc.c src/LinkedList.c src/PriorityQueue.c test/hardware/hardware.c test/LibcTest.c test/LinkedListTest.c test/CpuNodeTest.c test/CpuTest.c test/PriorityQueueTest.c test/test.c -o build/test
 	
 test: build-tests
 	./build/test
