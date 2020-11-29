@@ -1,6 +1,6 @@
 /*
 FreeDOS-32 kernel
-Copyright (C) 2008-2018  Salvatore ISAJA
+Copyright (C) 2008-2020  Salvatore ISAJA
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License version 2
@@ -48,8 +48,9 @@ void *SlabAllocator_allocate(SlabAllocator *sa) {
         sa->freeItems = sa->freeItems->next;
     } else {
         if (UNLIKELY(sa->brk == sa->limit)) { // includes the case for brk == limit == NULL for an empty allocator
-            void *page = frame2virt(PhysicalMemory_alloc(sa->task, permamapMemoryRegion));
-            if (UNLIKELY(page == NULL)) return NULL;
+            FrameNumber frameNumber = PhysicalMemory_allocate(sa->task, permamapMemoryRegion);
+            if (UNLIKELY(frameNumber.v == 0)) return NULL;
+            void *page = frame2virt(frameNumber);
             sa->brk = (uint8_t *) page;
             sa->limit = (uint8_t *) page + sa->itemSize * sa->itemsPerSlab;
         }

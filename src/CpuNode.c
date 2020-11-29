@@ -1,6 +1,6 @@
 /*
 FreeDOS-32 kernel
-Copyright (C) 2008-2018  Salvatore ISAJA
+Copyright (C) 2008-2020  Salvatore ISAJA
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License version 2
@@ -26,10 +26,10 @@ static inline bool isRunningLowerPriorityThread(const Cpu *cpu, const Cpu *other
 }
 
 Cpu *CpuNode_findTargetCpu(const CpuNode *node, Cpu *preferredCpu) {
-    Cpu *targetCpu = preferredCpu != NULL ? preferredCpu : &node->cpus[0];
+    Cpu *targetCpu = preferredCpu != NULL ? preferredCpu : node->cpus[0];
     // TODO: consider HyperThreading, TurboBoost and NUMA
     for (size_t i = 0; i < node->cpuCount; i++) {
-        Cpu *c = &node->cpus[i];
+        Cpu *c = node->cpus[i];
         if (c->active && c != targetCpu && isRunningLowerPriorityThread(c, targetCpu))
             targetCpu = c;
     }

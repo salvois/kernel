@@ -1,6 +1,6 @@
 /*
 FreeDOS-32 kernel
-Copyright (C) 2008-2018  Salvatore ISAJA
+Copyright (C) 2008-2020  Salvatore ISAJA
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License version 2
@@ -25,7 +25,7 @@ typedef struct DescriptorTableLocation {
 } DescriptorTableLocation;
 
 /** Global table of Cpu structures in use, each representing a logical processor. */
-Cpu* Cpu_cpus;
+Cpu *Cpu_cpus[MAX_CPU_COUNT];
 /** Global count of Cpu structures in use. */
 size_t Cpu_cpuCount;
 /** The one Interrupt Descriptor Table. */
@@ -49,8 +49,9 @@ __attribute__((section(".boot"))) static void GateDescriptor_set(CpuDescriptor *
 }
 
 /** Initializes the Cpu structure for the logical processor with the specified LAPIC id. */
-__attribute__((section(".boot"))) static void Cpu_initialize(Cpu *cpu, size_t lapicId) {
+__attribute__((section(".boot"))) static void Cpu_initialize(Cpu *cpu, size_t index, size_t lapicId) {
     memzero(cpu, sizeof(Cpu));
+    cpu->index = index;
     cpu->lapicId = lapicId;
     cpu->thisCpu = cpu;
     cpu->cpuNode = &CpuNode_theInstance;
@@ -121,10 +122,11 @@ __attribute__((section(".boot"))) void Cpu_loadCpuTables(Cpu *cpu) {
 
 /** Maps the Local APIC base address to virtual memory. */
 __attribute__((section(".boot"))) static void Cpu_mapLocalApic(const MpConfigHeader *mpConfigHeader) {
-    PageTableEntry *pd = phys2virt((uintptr_t) &Boot_kernelPageDirectoryPhysicalAddress);
-    PageTableEntry *pt = frame2virt(PhysicalMemory_alloc(NULL, permamapMemoryRegion));
-    if (pt == NULL) panic("Unable to allocate memory to map the Local APIC.");
-    pd[CPU_LAPIC_VIRTUAL_ADDRESS >> 22] = (virt2frame(pt) << PAGE_SHIFT) | ptPresent | ptWriteable;
+    PageTableEntry *pd = phys2virt(physicalAddress((uintptr_t) &Boot_kernelPageDirectoryPhysicalAddress));
+    FrameNumber ptFrameNumber = PhysicalMemory_allocate(NULL, permamapMemoryRegion);
+    if (ptFrameNumber.v == 0) panic("Unable to allocate memory to map the Local APIC.");
+    PageTableEntry *pt = frame2virt(ptFrameNumber);
+    pd[CPU_LAPIC_VIRTUAL_ADDRESS >> 22] = (ptFrameNumber.v << PAGE_SHIFT) | ptPresent | ptWriteable;
     pt[(CPU_LAPIC_VIRTUAL_ADDRESS >> 12) & 0x3FF] = ((mpConfigHeader != NULL) ? mpConfigHeader->lapicPhysicalAddress : 0xFEE00000)
             | ptPresent | ptWriteable | ptGlobal | ptCacheDisable;
     //for (int i = 0; i < 1024; i++) Log_printf("Page directory %i: %08X\n", i, pd[i]);
@@ -148,14 +150,6 @@ __attribute__((section(".boot"))) Cpu *Cpu_initializeCpuStructs(const MpConfigHe
         Cpu_cpuCount = 1;
     }
     Video_printf("Found %u enabled CPUs.\n", Cpu_cpuCount);
-    // Allocate the array of CPU structures
-    uintptr_t b = virt2frame(PhysicalMemory_frameDescriptors) + ceilToFrame(PhysicalMemory_totalMemoryFrames * sizeof(Frame));
-    size_t s = ceilToFrame(Cpu_cpuCount * sizeof(Cpu));
-    size_t a = PhysicalMemory_allocBlock(b, b + s);
-    if (a != s) {
-        panic("Unable to mark memory for CPU structures as allocated. Aborting.\n");
-    }
-    Cpu_cpus = frame2virt(b);
     // Initialize each CPU structure
     Cpu_mapLocalApic(mpConfigHeader);
     uint32_t currentLapicId = Cpu_readLocalApic(0x20) >> 24;
@@ -167,16 +161,20 @@ __attribute__((section(".boot"))) Cpu *Cpu_initializeCpuStructs(const MpConfigHe
         for (size_t i = 0; i < mpConfigHeader->entryCount && cp->entryType == mpConfigProcessor; i++, cp++) {
             if ((cp->flags & 1) != 0) {
                 Log_printf("Initializing CPU #%d with LAPIC ID 0x%02X, LAPIC version 0x%02X\n", cpuIndex, cp->lapicId, cp->lapicVersion);
-                Cpu *cpu = &Cpu_cpus[cpuIndex];
-                Cpu_initialize(cpu, cp->lapicId); // TODO: cp->lapicVersion?
+                FrameNumber frameNumber = PhysicalMemory_allocate(NULL, permamapMemoryRegion);
+                if (frameNumber.v == 0)
+                    panic("Unable to allocate memory for CPU %d. Aborting.\n", cpuIndex);
+                Cpu_cpus[cpuIndex] = frame2virt(frameNumber);
+                Cpu *cpu = Cpu_cpus[cpuIndex];
+                Cpu_initialize(cpu, cpuIndex, cp->lapicId); // TODO: cp->lapicVersion?
                 if (currentLapicId == cp->lapicId) bootCpu = cpu;
                 cpuIndex++;
             }
         }
     } else {
         Log_printf("Initializing the sole CPU #0 with LAPIC ID 0x%02X\n", currentLapicId);
-        Cpu *cpu = &Cpu_cpus[0];
-        Cpu_initialize(cpu, currentLapicId);
+        Cpu *cpu = Cpu_cpus[0];
+        Cpu_initialize(cpu, 0, currentLapicId);
         bootCpu = cpu;
     }
     if (bootCpu == NULL) {
@@ -204,15 +202,15 @@ __attribute__((section(".boot"))) void Cpu_setupIdt() {
 /** Starts processors other than the boot processor. */
 __attribute__((section(".boot"))) void Cpu_startOtherCpus() {
     // Relocate the real-mode startup code for application processors
-    memcpy(phys2virt(0x4000), phys2virt(0x104000), 1024);
+    memcpy(phys2virt(physicalAddress(0x4000)), phys2virt(physicalAddress(0x104000)), 1024);
     // Prepare for real-mode startup of application processors
     outp(0x70, 0x0F); // Select the "reset code" CMOS register
     outp(0x80, 0); // Just a small delay
     outp(0x71, 0x0A); // Select "resume execution by jump via 40h:0067h"
-    *(uint32_t *) phys2virt(0x467) = 0x04000000; // Start execution from physical address 0x4000
+    *(uint32_t *) phys2virt(physicalAddress(0x467)) = 0x04000000; // Start execution from physical address 0x4000
     // Initialize the Local APIC of the bootstrap (this) processor
     Cpu *cpu = Cpu_getCurrent();
-    Log_printf("Enabling LAPIC on bootstrap processor (CPU #%d, LAPIC ID 0x%02X, Cpu struct at %p).\n", cpu - Cpu_cpus, cpu->lapicId, cpu);
+    Log_printf("Enabling LAPIC on bootstrap processor (CPU #%d, LAPIC ID 0x%02X, Cpu struct at %p).\n", cpu->index, cpu->lapicId, cpu);
     Cpu_writeLocalApic(lapicSpuriousInterrupt, 0x1FF); // LAPIC enabled, Focus Check disabled, spurious vector 0xFF
     Log_printf("Sending INIT IPI.\n");
     Cpu_writeLocalApic(lapicInterruptCommandLow, 0xC4500); // INIT assert, level triggered, to all excluding self

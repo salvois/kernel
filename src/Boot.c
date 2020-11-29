@@ -1,6 +1,6 @@
 /*
 FreeDOS-32 kernel
-Copyright (C) 2008-2018  Salvatore ISAJA
+Copyright (C) 2008-2020  Salvatore ISAJA
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License version 2
@@ -32,10 +32,10 @@ extern uint8_t Boot_stack;
  * Search for the Multi-Processor Floating Pointer structure within
  * the specified range of physical addresses.
  */
-__attribute((section(".boot"))) static const MpFloatingPointer *Boot_searchMpFloatingPointer(uintptr_t begin, uintptr_t end) {
+__attribute((section(".boot"))) static const MpFloatingPointer *Boot_searchMpFloatingPointer(PhysicalAddress begin, PhysicalAddress end) {
     Log_printf("Searching for the MP Floating Pointer Structure at physical address [%p, %p).\n", begin, end);
-    assert((begin & 0xF) == 0); // the structure must be aligned to a 16-byte boundary
-    for ( ; begin < end; begin += 16) {
+    assert((begin.v & 0xF) == 0); // the structure must be aligned to a 16-byte boundary
+    for ( ; begin.v < end.v; begin.v += 16) {
         const MpFloatingPointer *mpfp = phys2virt(begin);
         if (mpfp->signature == 0x5F504D5F) { // "_MP_"
             //log("  Signature found at %p.\n", mpfp);
@@ -57,11 +57,11 @@ __attribute((section(".boot"))) static const MpFloatingPointer *Boot_searchMpFlo
  */
 __attribute((section(".boot"))) static const MpConfigHeader *Boot_findMpConfig() {
     // Find the MP Floating Pointer structure
-    uintptr_t ebda = (uintptr_t) *(const uint16_t *) phys2virt(0x40E) << 4;
-    const MpFloatingPointer *mpfp = Boot_searchMpFloatingPointer(ebda, ebda + 1024);
-    if (mpfp == NULL) mpfp = Boot_searchMpFloatingPointer(654336, 655360);
-    if (mpfp == NULL) mpfp = Boot_searchMpFloatingPointer(523264, 524288);
-    if (mpfp == NULL) mpfp = Boot_searchMpFloatingPointer(0xF0000, 0x100000);
+    PhysicalAddress ebda = physicalAddress((uintptr_t) *(const uint16_t *) phys2virt(physicalAddress(0x40E)) << 4);
+    const MpFloatingPointer *mpfp = Boot_searchMpFloatingPointer(ebda, addToPhysicalAddress(ebda, 1024));
+    if (mpfp == NULL) mpfp = Boot_searchMpFloatingPointer(physicalAddress(654336),  physicalAddress(655360));
+    if (mpfp == NULL) mpfp = Boot_searchMpFloatingPointer(physicalAddress(523264),  physicalAddress(524288));
+    if (mpfp == NULL) mpfp = Boot_searchMpFloatingPointer(physicalAddress(0xF0000), physicalAddress(0x100000));
     if (mpfp == NULL) {
         Log_printf("MP Floating Pointer Structure not found.\n");
         return NULL;
@@ -73,7 +73,7 @@ __attribute((section(".boot"))) static const MpConfigHeader *Boot_findMpConfig()
         Log_printf("MP Config structure not found.\n");
         return NULL;
     }
-    return phys2virt(mpfp->mpConfigPhysicalAddress);
+    return phys2virt(physicalAddress(mpfp->mpConfigPhysicalAddress));
 }
 
 /**
@@ -86,9 +86,9 @@ __attribute((section(".boot"))) static const MpConfigHeader *Boot_findMpConfig()
 __attribute((section(".boot"))) Cpu *Boot_entry() {
     Video_initialize();
     Log_initialize();
-    const MultibootMbi *mbi = phys2virt(Boot_mbiPhysicalAddress);
+    const MultibootMbi *mbi = phys2virt(physicalAddress(Boot_mbiPhysicalAddress));
     if ((mbi->flags & (1 << 9)) != 0) {
-        Video_printf("FreeDOS-32 kernel booting from \"%s\"\n", phys2virt(mbi->boot_loader_name));
+        Video_printf("FreeDOS-32 kernel booting from \"%s\"\n", phys2virt(physicalAddress(mbi->boot_loader_name)));
     } else {
         Video_printf("FreeDOS-32 kernel booting from an unknown bootloader\n");
     }
@@ -101,7 +101,11 @@ __attribute((section(".boot"))) Cpu *Boot_entry() {
     Log_printf("sizeof(Channel)=%d\n", sizeof(Channel));
     Log_printf("sizeof(Endpoint)=%d\n", sizeof(Endpoint));
     Log_printf("sizeof(Frame)=%d\n", sizeof(Frame));
-    PhysicalMemory_initializeFromMultibootV1(mbi, (uintptr_t) &Boot_imageBeginPhysicalAddress, (uintptr_t) &Boot_imageEndPhysicalAddress);
+    PhysicalMemory_initializeRegions();
+    PhysicalMemory_initializeFromMultibootV1(
+            mbi,
+            physicalAddress((uintptr_t) &Boot_imageBeginPhysicalAddress),
+            physicalAddress((uintptr_t) &Boot_imageEndPhysicalAddress));
     const MpConfigHeader *mpConfigHeader = Boot_findMpConfig();
     Acpi_findConfig();
     Cpu *bootCpu = Cpu_initializeCpuStructs(mpConfigHeader);
@@ -131,7 +135,7 @@ __attribute((section(".boot"))) ThreadRegisters *Boot_bspEntry() {
     while (true) {
         bool allInitialized = true;
         for (size_t i = 0; i < Cpu_cpuCount; i++) {
-            Cpu *c = &Cpu_cpus[i];
+            Cpu *c = Cpu_cpus[i];
             Log_printf("Checking if CPU #%d is alive. initialized=%d\n", i, AtomicWord_get(&c->initialized));
             if (c != cpu && AtomicWord_get(&c->initialized) == 0) {
                 allInitialized = false;
@@ -144,16 +148,16 @@ __attribute((section(".boot"))) ThreadRegisters *Boot_bspEntry() {
     Video_printf("All CPUs are running.\n");
     Spinlock_lock(&CpuNode_theInstance.lock); // see comments on ElfLoader_fromExeMultibootModule()
     // Test Multiboot modules
-    const MultibootMbi *mbi = phys2virt(Boot_mbiPhysicalAddress);
+    const MultibootMbi *mbi = phys2virt(physicalAddress(Boot_mbiPhysicalAddress));
     if (mbi->flags & (1 << 3)) { // Boot modules provided
-        const MultibootModule *m = phys2virt(mbi->mods_addr);
+        const MultibootModule *m = phys2virt(physicalAddress(mbi->mods_addr));
         for (size_t i = 0; i < mbi->mods_count; i++, m++) {
-            Log_printf("Testing multiboot module %d at [%p-%p), string=%p \"%s\".\n", i, m->mod_start, m->mod_end, m->string, phys2virt(m->string));
+            Log_printf("Testing multiboot module %d at [%p-%p), string=%p \"%s\".\n", i, m->mod_start, m->mod_end, m->string, phys2virt(physicalAddress(m->string)));
             Task *task = Task_create(NULL, NULL);
             Video_printf("Task at %p\n", task);
             Video_printf("Task address space root at %p.\n", task->addressSpace.root);
             AddressSpace_activate(&task->addressSpace);
-            ElfLoader_fromExeMultibootModule(task, m->mod_start, m->mod_end, phys2virt(m->string));
+            ElfLoader_fromExeMultibootModule(task, physicalAddress(m->mod_start), physicalAddress(m->mod_end), phys2virt(physicalAddress(m->string)));
         }
     }
     Spinlock_unlock(&CpuNode_theInstance.lock); // see comments on ElfLoader_fromExeMultibootModule()
@@ -170,9 +174,9 @@ __attribute((section(".boot"))) ThreadRegisters *Boot_bspEntry() {
  */
 __attribute__((section(".boot"))) ThreadRegisters *Boot_apEntry() {
     Cpu *cpu = Cpu_getCurrent();
-    Log_printf("Welcome from CPU %d.\n", cpu - Cpu_cpus);
+    Log_printf("Welcome from CPU %d.\n", cpu->index);
     Cpu_loadCpuTables(cpu);
-    Log_printf("Enabling LAPIC on CPU #%d (LAPIC ID 0x%02X, Cpu struct at %p).\n", cpu - Cpu_cpus, cpu->lapicId, cpu);
+    Log_printf("Enabling LAPIC on CPU #%d (LAPIC ID 0x%02X, Cpu struct at %p).\n", cpu->index, cpu->lapicId, cpu);
     Cpu_writeLocalApic(lapicSpuriousInterrupt, 0x1FF); // LAPIC enabled, Focus Check disabled, spurious vector 0xFF
     LapicTimer_initialize(&cpu->lapicTimer);
     Tsc_initialize(&cpu->tsc);

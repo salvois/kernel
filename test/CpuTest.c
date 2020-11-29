@@ -1,3 +1,20 @@
+/*
+FreeDOS-32 kernel
+Copyright (C) 2008-2020  Salvatore ISAJA
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License version 2
+as published by the Free Software Foundation.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
 #include "test.h"
 #include "kernel.h"
 
@@ -18,14 +35,14 @@ static void initCpu(Cpu *cpu, bool active, uint64_t scheduleArrival, Thread *cur
     cpu->idleThread.queueNode.key = THREAD_IDLE_PRIORITY;
 }
 
-static void initCpuNode(CpuNode *node, Cpu *cpus, size_t cpuCount, uint64_t scheduleArrival) {
+static void initCpuNode(CpuNode *node, Cpu **cpus, size_t cpuCount, uint64_t scheduleArrival) {
     memzero(node, sizeof(CpuNode));
     node->cpus = cpus;
     node->cpuCount = cpuCount;
     node->scheduleArrival = scheduleArrival;
     PriorityQueue_init(&node->readyQueue);
     for (size_t i = 0; i < cpuCount; i++)
-        cpus->cpuNode = node;
+        cpus[i]->cpuNode = node;
 }
 
 static void CpuTest_switchToThread_invariants() {
@@ -202,7 +219,8 @@ static void CpuTest_findNextThreadAndUpdateReadyQueue_runningWithNextThread() {
     initCpu(&cpu, true, 3, &currentThread);
     cpu.nextThread = &nextThread;
     CpuNode node;
-    initCpuNode(&node, &cpu, 1, 3);
+    Cpu *cpus[] = { &cpu };
+    initCpuNode(&node, cpus, 1, 3);
     
     Thread *thread = Cpu_findNextThreadAndUpdateReadyQueue(&cpu, false);
     
@@ -218,7 +236,8 @@ static void CpuTest_findNextThreadAndUpdateReadyQueue_idleWithNextThread() {
     initCpu(&cpu, true, 3, &cpu.idleThread);
     cpu.nextThread = &nextThread;
     CpuNode node;
-    initCpuNode(&node, &cpu, 1, 3);
+    Cpu *cpus[] = { &cpu };
+    initCpuNode(&node, cpus, 1, 3);
     
     Thread *thread = Cpu_findNextThreadAndUpdateReadyQueue(&cpu, false);
     
@@ -236,7 +255,8 @@ static void CpuTest_findNextThreadAndUpdateReadyQueue_blockedWithNextThread() {
     initCpu(&cpu, true, 3, &currentThread);
     cpu.nextThread = &nextThread;
     CpuNode node;
-    initCpuNode(&node, &cpu, 1, 3);
+    Cpu *cpus[] = { &cpu };
+    initCpuNode(&node, cpus, 1, 3);
     
     Thread *thread = Cpu_findNextThreadAndUpdateReadyQueue(&cpu, false);
     
@@ -251,7 +271,8 @@ static void CpuTest_findNextThreadAndUpdateReadyQueue_blockedWithNoReadyThread()
     Cpu cpu;
     initCpu(&cpu, true, 3, &currentThread);
     CpuNode node;
-    initCpuNode(&node, &cpu, 1, 3);
+    Cpu *cpus[] = { &cpu };
+    initCpuNode(&node, cpus, 1, 3);
     
     Thread *thread = Cpu_findNextThreadAndUpdateReadyQueue(&cpu, false);
     
@@ -268,7 +289,8 @@ static void CpuTest_findNextThreadAndUpdateReadyQueue_blockedWithReadyThread() {
     Cpu cpu;
     initCpu(&cpu, true, 3, &currentThread);
     CpuNode node;
-    initCpuNode(&node, &cpu, 1, 3);
+    Cpu *cpus[] = { &cpu };
+    initCpuNode(&node, cpus, 1, 3);
     PriorityQueue_insert(&node.readyQueue, &readyThread.queueNode);
     
     Thread *thread = Cpu_findNextThreadAndUpdateReadyQueue(&cpu, false);
@@ -284,7 +306,8 @@ static void CpuTest_findNextThreadAndUpdateReadyQueue_runningWithNoReadyThread()
     Cpu cpu;
     initCpu(&cpu, true, 3, &currentThread);
     CpuNode node;
-    initCpuNode(&node, &cpu, 1, 3);
+    Cpu *cpus[] = { &cpu };
+    initCpuNode(&node, cpus, 1, 3);
     
     Thread *thread = Cpu_findNextThreadAndUpdateReadyQueue(&cpu, false);
     
@@ -301,7 +324,8 @@ static void CpuTest_findNextThreadAndUpdateReadyQueue_runningWithLowerPriorityRe
     Cpu cpu;
     initCpu(&cpu, true, 3, &currentThread);
     CpuNode node;
-    initCpuNode(&node, &cpu, 1, 3);
+    Cpu *cpus[] = { &cpu };
+    initCpuNode(&node, cpus, 1, 3);
     PriorityQueue_insert(&node.readyQueue, &readyThread.queueNode);
     
     Thread *thread = Cpu_findNextThreadAndUpdateReadyQueue(&cpu, false);
@@ -319,7 +343,8 @@ static void CpuTest_findNextThreadAndUpdateReadyQueue_runningWithHigherPriorityR
     Cpu cpu;
     initCpu(&cpu, true, 3, &currentThread);
     CpuNode node;
-    initCpuNode(&node, &cpu, 1, 3);
+    Cpu *cpus[] = { &cpu };
+    initCpuNode(&node, cpus, 1, 3);
     PriorityQueue_insert(&node.readyQueue, &readyThread.queueNode);
     
     Thread *thread = Cpu_findNextThreadAndUpdateReadyQueue(&cpu, false);
@@ -337,7 +362,8 @@ static void CpuTest_findNextThreadAndUpdateReadyQueue_runningWithSamePriorityRea
     Cpu cpu;
     initCpu(&cpu, true, 3, &currentThread);
     CpuNode node;
-    initCpuNode(&node, &cpu, 1, 3);
+    Cpu *cpus[] = { &cpu };
+    initCpuNode(&node, cpus, 1, 3);
     PriorityQueue_insert(&node.readyQueue, &readyThread.queueNode);
     
     Thread *thread = Cpu_findNextThreadAndUpdateReadyQueue(&cpu, false);
@@ -357,7 +383,8 @@ static void CpuTest_findNextThreadAndUpdateReadyQueue_timeslicedWithSamePriority
     Cpu cpu;
     initCpu(&cpu, true, 3, &currentThread);
     CpuNode node;
-    initCpuNode(&node, &cpu, 1, 3);
+    Cpu *cpus[] = { &cpu };
+    initCpuNode(&node, cpus, 1, 3);
     PriorityQueue_insert(&node.readyQueue, &readyThread.queueNode);
     PriorityQueue_insert(&node.readyQueue, &anotherReadyThread.queueNode);
     
@@ -375,7 +402,8 @@ static void CpuTest_findNextThreadAndUpdateReadyQueue_idleWithReadyThread() {
     Cpu cpu;
     initCpu(&cpu, true, 3, &cpu.idleThread);
     CpuNode node;
-    initCpuNode(&node, &cpu, 1, 3);
+    Cpu *cpus[] = { &cpu };
+    initCpuNode(&node, cpus, 1, 3);
     PriorityQueue_insert(&node.readyQueue, &readyThread.queueNode);
     
     Thread *thread = Cpu_findNextThreadAndUpdateReadyQueue(&cpu, false);
@@ -394,7 +422,8 @@ static void CpuTest_accountTimesliceAndCheckExpiration_notExpired() {
     cpu.tsc = (Tsc) { .nsPerTick = 1 << 20 };
     cpu.lastScheduleTime = 1000;
     CpuNode node;
-    initCpuNode(&node, &cpu, 1, 3);
+    Cpu *cpus[] = { &cpu };
+    initCpuNode(&node, cpus, 1, 3);
     PriorityQueue_insert(&node.readyQueue, &currentThread.queueNode);
     theFakeHardware = (FakeHardware) { .tscRegister = 4000000 };
     
@@ -415,7 +444,8 @@ static void CpuTest_accountTimesliceAndCheckExpiration_expired() {
     cpu.tsc = (Tsc) { .nsPerTick = 1 << 20 };
     cpu.lastScheduleTime = 1000;
     CpuNode node;
-    initCpuNode(&node, &cpu, 1, 3);
+    Cpu *cpus[] = { &cpu };
+    initCpuNode(&node, cpus, 1, 3);
     PriorityQueue_insert(&node.readyQueue, &currentThread.queueNode);
     theFakeHardware = (FakeHardware) { .tscRegister = 5995000 };
     
@@ -436,7 +466,8 @@ static void CpuTest_accountTimesliceAndCheckExpiration_runningForLongTime() {
     cpu.tsc = (Tsc) { .nsPerTick = 1 << 20 };
     cpu.lastScheduleTime = 1000;
     CpuNode node;
-    initCpuNode(&node, &cpu, 1, 3);
+    Cpu *cpus[] = { &cpu };
+    initCpuNode(&node, cpus, 1, 3);
     PriorityQueue_insert(&node.readyQueue, &currentThread.queueNode);
     theFakeHardware = (FakeHardware) { .tscRegister = 1000000000000ULL };
     
@@ -450,7 +481,8 @@ static void CpuTest_setTimesliceTimer_idle() {
     Cpu cpu;
     initCpu(&cpu, true, 3, &cpu.idleThread);
     CpuNode node;
-    initCpuNode(&node, &cpu, 1, 3);
+    Cpu *cpus[] = { &cpu };
+    initCpuNode(&node, cpus, 1, 3);
     const uint32_t unchangingValue = 1234;
     theFakeHardware = (FakeHardware) { .lapicTimerInitialCount = unchangingValue };
     
@@ -469,7 +501,8 @@ static void CpuTest_setTimesliceTimer_lowerPriorityReeadyThread() {
     Cpu cpu;
     initCpu(&cpu, true, 3, &currentThread);
     CpuNode node;
-    initCpuNode(&node, &cpu, 1, 3);
+    Cpu *cpus[] = { &cpu };
+    initCpuNode(&node, cpus, 1, 3);
     PriorityQueue_insert(&node.readyQueue, &readyThread.queueNode);
     const uint32_t unchangingValue = 1234;
     theFakeHardware = (FakeHardware) { .lapicTimerInitialCount = unchangingValue };
@@ -490,7 +523,8 @@ static void CpuTest_setTimesliceTimer_samePriorityReeadyThread() {
     Cpu cpu;
     initCpu(&cpu, true, 3, &currentThread);
     CpuNode node;
-    initCpuNode(&node, &cpu, 1, 3);
+    Cpu *cpus[] = { &cpu };
+    initCpuNode(&node, cpus, 1, 3);
     PriorityQueue_insert(&node.readyQueue, &readyThread.queueNode);
     cpu.lapicTimer = (LapicTimer) { .ticksPerNs = 1 << 23 };
     theFakeHardware = (FakeHardware) { .lapicTimerInitialCount = 0 };

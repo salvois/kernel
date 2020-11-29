@@ -1,6 +1,6 @@
 /*
 FreeDOS-32 kernel
-Copyright (C) 2008-2018  Salvatore ISAJA
+Copyright (C) 2008-2020  Salvatore ISAJA
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License version 2
@@ -43,6 +43,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "stdlib.h"
 #include "AtomicWord.h"
 #include "NaryTrie.h"
+#include "LinkedList.h"
 
 /** Prints the specified message on screen and forcefully halts the system. */
 __attribute__((noreturn)) void panic(const char *format, ...);
@@ -57,9 +58,9 @@ __attribute__((noreturn)) void panic(const char *format, ...);
 /** Virtual address the kernel space begin at. */
 #define HIGH_HALF_BEGIN 0xC0000000u
 /** Highest possible address of physical memory usable for ISA DMA. */
-#define ISADMA_MEMORY_REGION_FRAME_END (16 << 20 >> PAGE_SHIFT)
+#define ISADMA_MEMORY_REGION_FRAME_END ((FrameNumber) { 16 << 20 >> PAGE_SHIFT })
 /** Highest possible address of permanently mapped physical memory. */
-#define PERMAMAP_MEMORY_REGION_FRAME_END (896 << 20 >> PAGE_SHIFT)
+#define PERMAMAP_MEMORY_REGION_FRAME_END ((FrameNumber) { 896 << 20 >> PAGE_SHIFT })
 /** The highest possible address for physical memory. */
 #define MAX_PHYSICAL_ADDRESS 0xFFFFF000u // 4 GiB - 4096 bytes
 /** Max number of pages per task for TLB invalidation of individual pages (invlpg) before switching to full TLB invalidation. */
@@ -68,6 +69,8 @@ __attribute__((noreturn)) void panic(const char *format, ...);
 #define NICE_LEVELS 40
 /** Frequency in Hz of the ACPI Power Management timer. */
 #define ACPI_PMTIMER_FREQUENCY 3579545
+/** The absolute maximum number of CPUs supported. */
+#define MAX_CPU_COUNT 1024
 
 typedef struct Frame Frame;
 typedef struct Task Task;
@@ -76,6 +79,13 @@ typedef struct Thread Thread;
 typedef struct Cpu Cpu;
 typedef struct CpuNode CpuNode;
 typedef struct ListNode ListNode;
+typedef struct { uintptr_t v; } PhysicalAddress;
+typedef struct { uintptr_t v; } VirtualAddress;
+typedef struct { uintptr_t v; } FrameNumber;
+static inline PhysicalAddress physicalAddress(uintptr_t v) { return (PhysicalAddress) { v }; }
+static inline PhysicalAddress addToPhysicalAddress(PhysicalAddress pa, ptrdiff_t d) { return (PhysicalAddress) { pa.v + d }; }
+static inline FrameNumber frameNumber(uintptr_t v) { return (FrameNumber) { v }; }
+static inline FrameNumber addToFrameNumber(FrameNumber fn, ptrdiff_t d) { return (FrameNumber) { fn.v + d }; }
 
 
 /******************************************************************************
@@ -329,6 +339,31 @@ typedef struct MultibootMbi {
     uint32_t config_table;
     uint32_t boot_loader_name;
 } MultibootMbi;
+
+#define MULTIBOOTMBI_MEMLOWER_MEMUPPER_PROVIDED (1 << 0)
+#define MULTIBOOTMBI_MODULES_PROVIDED (1 << 3)
+#define MULTIBOOTMBI_ELF_SECTIONS_PROVIDED (1 << 5)
+#define MULTIBOOTMBI_MEMORY_MAP_PROVIDED (1 << 6)
+
+static inline bool MultibootMbi_areMemLowerAndMemUpperProvided(const MultibootMbi *mbi) {
+    return mbi->flags & MULTIBOOTMBI_MEMLOWER_MEMUPPER_PROVIDED;
+}
+
+static inline bool MultibootMbi_areModulesProvided(const MultibootMbi *mbi) {
+    return mbi->flags & MULTIBOOTMBI_MODULES_PROVIDED;
+}
+
+static inline bool MultibootMbi_areElfSectionsProvided(const MultibootMbi *mbi) {
+    return mbi->flags & MULTIBOOTMBI_ELF_SECTIONS_PROVIDED;
+}
+
+static inline bool MultibootMbi_isMemoryMapProvided(const MultibootMbi *mbi) {
+    return mbi->flags & MULTIBOOTMBI_MEMORY_MAP_PROVIDED;
+}
+
+void MultibootMbi_scanElfSections(const MultibootMbi *mbi, void *closure, void (*callback)(void *closure, size_t index, PhysicalAddress begin, PhysicalAddress end));
+void MultibootMbi_scanModules(const MultibootMbi *mbi, void *closure, void (*callback)(void *closure, size_t index, PhysicalAddress begin, PhysicalAddress end, PhysicalAddress name));
+void MultibootMbi_scanMemoryMap(const MultibootMbi *mbi, void *closure, void (*callback)(void *closure, uint64_t begin, uint64_t length, int type));
 
 
 /******************************************************************************
@@ -591,68 +626,92 @@ typedef enum PhysicalMemoryRegionType {
     physicalMemoryRegionCount
 } PhysicalMemoryRegionType;
 
+#define VIRTUAL_ADDRESS_UNMAPPED ((VirtualAddress) { 0 })
+#define VIRTUAL_ADDRESS_CAPABILITY_SPACE ((VirtualAddress) { 1 })
+
+typedef struct PhysicalMemoryRegion {
+    LinkedList_Node freeListHead;
+    FrameNumber begin;
+    FrameNumber end;
+    size_t freeFrameCount;
+} PhysicalMemoryRegion;
+
 /** Descriptor of a physical memory frame. */
 struct Frame {
-    /**
-     * Frame metadata.
-     * For free frame chunks, number of frames in the chunk, flags in the lowest bits.
-     * For mapped frames, the virtual address the frame is mapped into the owning task, if any.
-     */
-    size_t  metadata;
-    /** Task owning this frame. */
-    Task   *task;
-    /** Previous frame in a doubly linked list. */
-    Frame  *prev;
-    /** Next frame in a doubly linked list. */
-    Frame  *next;
+    Task *task;
+    VirtualAddress virtualAddress;
+    LinkedList_Node node;
 };
 
 extern Frame *PhysicalMemory_frameDescriptors;
 extern size_t PhysicalMemory_totalMemoryFrames;
+extern PhysicalMemoryRegion PhysicalMemory_regions[physicalMemoryRegionCount];
+
+static inline Frame *Frame_fromNode(LinkedList_Node *node) {
+    return (Frame *) ((uint8_t *) node - offsetof(Frame, node));
+}
+
+static inline FrameNumber getFrameNumber(const Frame *frame) {
+    return frameNumber((uintptr_t) (frame - PhysicalMemory_frameDescriptors));
+}
+
+static inline Frame *getFrame(FrameNumber frameNumber) {
+    return &PhysicalMemory_frameDescriptors[frameNumber.v];
+}
 
 /** Rounds the specified physical address down to a frame number. */
-static inline uintptr_t floorToFrame(uintptr_t phys) {
-    return phys >> PAGE_SHIFT;
+static inline FrameNumber floorToFrame(PhysicalAddress phys) {
+    return frameNumber(phys.v >> PAGE_SHIFT);
 }
 
 /** Rounds the specified physical address up to a frame number. */
-static inline uintptr_t ceilToFrame(uintptr_t phys) {
-    return (phys + PAGE_SIZE - 1) >> PAGE_SHIFT;
+static inline FrameNumber ceilToFrame(PhysicalAddress phys) {
+    return frameNumber((phys.v + PAGE_SIZE - 1) >> PAGE_SHIFT);
+}
+
+/** Rounds the specified physical address up to a frame number. */
+static inline PhysicalAddress frame2phys(FrameNumber frameNumber) {
+    return physicalAddress(frameNumber.v << PAGE_SHIFT);
 }
 
 /** Returns the virtual address of the specified permanently mapped physical address. */
-static inline void *phys2virt(uintptr_t phys) {
-    assert(phys < PERMAMAP_MEMORY_REGION_FRAME_END << PAGE_SHIFT);
-    return (void *) (phys + HIGH_HALF_BEGIN);
+static inline void *phys2virt(PhysicalAddress phys) {
+    return (void*) ( phys.v + HIGH_HALF_BEGIN );
 }
 
 /** Returns the physical address of the specified permanently mapped virtual address. */
-static inline uintptr_t virt2phys(const void *virt) {
-    assert((uintptr_t) virt >= HIGH_HALF_BEGIN);
-    return (uintptr_t) virt - HIGH_HALF_BEGIN;
+static inline PhysicalAddress virt2phys(const void *virt) {
+    return physicalAddress((uintptr_t) virt - HIGH_HALF_BEGIN);
 }
 
 /** Returns the virtual address of the specified permanently mapped frame number. */
-static inline void *frame2virt(uintptr_t frame) {
-    assert(frame < PERMAMAP_MEMORY_REGION_FRAME_END);
-    return (void *) ((frame << PAGE_SHIFT) + HIGH_HALF_BEGIN);
+static inline void *frame2virt(FrameNumber frameNumber) {
+    return phys2virt(physicalAddress(frameNumber.v << PAGE_SHIFT));
 }
 
 /** Returns the frame number of the specified permanently mapped virtual address. */
-static inline uintptr_t virt2frame(const void *virt) {
-    assert((uintptr_t) virt >= HIGH_HALF_BEGIN);
-    return ((uintptr_t) virt - HIGH_HALF_BEGIN) >> PAGE_SHIFT;
+static inline FrameNumber virt2frame(void *virt) {
+    return frameNumber(virt2phys(virt).v >> PAGE_SHIFT);
 }
 
-__attribute__((section(".boot"))) void PhysicalMemory_initializeFromMultibootV1(
-        const MultibootMbi *mbi, uintptr_t imageBeginPhysicalAddress, uintptr_t imageEndPhysicalAddress);
-void      PhysicalMemory_addBlock    (uintptr_t begin, uintptr_t end);
-size_t    PhysicalMemory_allocBlock  (uintptr_t begin, uintptr_t end);
-uintptr_t PhysicalMemory_alloc       (Task *task, PhysicalMemoryRegionType preferredRegion);
-void      PhysicalMemory_free        (uintptr_t f);
-#if LOG != LOG_NONE
-void      PhysicalMemory_dumpFreeList();
-#endif
+void PhysicalMemoryRegion_initialize(PhysicalMemoryRegion *pmr, FrameNumber begin, FrameNumber end);
+void PhysicalMemoryRegion_add(PhysicalMemoryRegion *pmr, FrameNumber begin, FrameNumber end);
+void PhysicalMemoryRegion_remove(PhysicalMemoryRegion *pmr, FrameNumber begin, FrameNumber end);
+FrameNumber PhysicalMemoryRegion_allocate(PhysicalMemoryRegion *pmr, Task *task);
+void PhysicalMemoryRegion_deallocate(PhysicalMemoryRegion *pmr, FrameNumber frameNumber);
+
+void PhysicalMemory_add(PhysicalAddress begin, PhysicalAddress end);
+void PhysicalMemory_remove(PhysicalAddress begin, PhysicalAddress end);
+void PhysicalMemory_initializeRegions();
+PhysicalAddress PhysicalMemory_findKernelEnd(const MultibootMbi *mbi, PhysicalAddress imageBegin, PhysicalAddress imageEnd);
+PhysicalAddress PhysicalMemory_findMultibootModulesEnd(const MultibootMbi *mbi);
+PhysicalAddress PhysicalMemory_findPhysicalAddressUpperBound(const MultibootMbi *mbi);
+void PhysicalMemory_addFreeMemoryBlocks(const MultibootMbi *mbi);
+void PhysicalMemory_markInitialMemoryAsAllocated(const MultibootMbi *mbi, PhysicalAddress imageBegin, PhysicalAddress kernelEnd);
+void PhysicalMemory_initializeFromMultibootV1(const MultibootMbi *mbi, PhysicalAddress imageBegin, PhysicalAddress imageEnd);
+
+FrameNumber PhysicalMemory_allocate(Task *task, PhysicalMemoryRegionType preferredRegion);
+void PhysicalMemory_deallocate(FrameNumber frameNumber);
 
 
 /******************************************************************************
@@ -1035,6 +1094,7 @@ enum IrqVector {
  * are CPU-local.
  */
 struct Cpu {
+    size_t        index;
     uint32_t      lapicId;
     bool          active;
     bool          rescheduleNeeded;
@@ -1070,11 +1130,12 @@ union CpuChecker {
     char wrongIdleThreadStackOffset[offsetof(Cpu, idleThreadStack) == CPU_IDLE_THREAD_STACK_OFFSET];
     char wrongStackOffset[offsetof(Cpu, stack) == CPU_STACK_OFFSET];
     char wrongCpuSize[sizeof(Cpu) == CPU_STRUCT_SIZE];
+    char cpuNotFittingInPage[sizeof(Cpu) <= PAGE_SIZE];
 }; 
 
 /** Kernel state of a set of logical processors sharing scheduling decisions. */
 struct CpuNode {
-    Cpu          *cpus;
+    Cpu         **cpus;
     size_t        cpuCount;
     uint64_t      scheduleArrival; // increases by one every time a CPU of the node is scheduled
     PriorityQueue readyQueue;
@@ -1091,7 +1152,7 @@ typedef struct IsrTableEntry {
 
 extern CpuNode   CpuNode_theInstance;
 extern uint32_t  Cpu_cpuCount;
-extern Cpu      *Cpu_cpus;
+extern Cpu      *Cpu_cpus[MAX_CPU_COUNT];
 extern unsigned  Cpu_timesliceLengths[NICE_LEVELS];
 extern uint8_t   Boot_kernelPageDirectoryPhysicalAddress;
 
@@ -1125,13 +1186,13 @@ void Pic8259_initialize(uint8_t masterVector, uint8_t slaveVector);
 
 typedef struct AddressSpace {
     PageTableEntry root;
-    size_t         tlbShootdownPageCount;
-    uintptr_t      tlbShootdownPages[TASK_MAX_TLB_SHOOTDOWN_PAGES];
-    Frame         *shootdownFrames;
+    size_t tlbShootdownPageCount;
+    uintptr_t tlbShootdownPages[TASK_MAX_TLB_SHOOTDOWN_PAGES];
+    LinkedList_Node shootdownFrameListHead;
 } AddressSpace;
 
 int  AddressSpace_initialize(Task *task);
-int  AddressSpace_map(Task *task, uintptr_t virtualAddress, uintptr_t frame);
+int  AddressSpace_map(Task *task, uintptr_t virtualAddress, FrameNumber frameNumber);
 int  AddressSpace_mapCopy(Task *destTask, uintptr_t destVirt, Task *srcTask, uintptr_t srcVirt);
 int  AddressSpace_mapFromNewFrame(Task *task, uintptr_t virtualAddress, PhysicalMemoryRegionType preferredRegion);
 void AddressSpace_unmap(Task *task, uintptr_t virtualAddress, uintptr_t payload);
@@ -1169,7 +1230,6 @@ struct Task {
     AddressSpace   addressSpace;
     SlabAllocator  capabilitySpace;
     size_t         threadCount;
-    uint8_t        padding[4]; // sizeof(Task) must be a multiple of 16 bytes
 };
 
 /**
@@ -1182,7 +1242,7 @@ union TaskChecker {
 
 Task       *Task_create(Task *ownerTask, uintptr_t *cap);
 Capability *Task_allocateCapability(Task *task, uintptr_t obj, uintptr_t badge);
-Capability *Task_lookupCapability(Task *task, uintptr_t address);
+Capability *Task_lookupCapability(Task *task, PhysicalAddress address);
 uintptr_t   Task_getCapabilityAddress(const Capability *cap);
 void        Task_deallocateCapability(Task *task, Capability *cap);
 
@@ -1232,7 +1292,7 @@ typedef enum Elf32_Shdr_Type {
     SHT_SYMTAB_SHNDX
 } Elf32_Shdr_Type;
 
-void ElfLoader_fromExeMultibootModule(Task *task, uintptr_t begin, uint32_t end, const char *name);
+void ElfLoader_fromExeMultibootModule(Task *task, PhysicalAddress begin, PhysicalAddress end, const char *commandLine);
 
 
 /******************************************************************************
@@ -1241,7 +1301,7 @@ void ElfLoader_fromExeMultibootModule(Task *task, uintptr_t begin, uint32_t end,
 
 int Syscall_allocateIpcBuffer(Task *task, uintptr_t virtualAddress);
 int Syscall_createChannel(Task *task);
-int Syscall_deleteCapability(Task *task, uintptr_t index);
+int Syscall_deleteCapability(Task *task, PhysicalAddress index);
 int Syscall_sendMessage(Cpu *cpu, uintptr_t socketCapIndex, uintptr_t endpointCapIndex);
 int Syscall_receiveMessage(Thread *thread, uintptr_t endpointCapIndex, uint8_t *buffer, size_t size);
 int Syscall_readMessage(Thread *thread, uintptr_t messageCapIndex, size_t offset, uint8_t *buffer, size_t size);

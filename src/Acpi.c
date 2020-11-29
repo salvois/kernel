@@ -1,6 +1,6 @@
 /*
 FreeDOS-32 kernel
-Copyright (C) 2008-2018  Salvatore ISAJA
+Copyright (C) 2008-2020  Salvatore ISAJA
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License version 2
@@ -94,10 +94,10 @@ void Acpi_writePm1Control(uint16_t value) {
  * Searches for the ACPI Root System Descriptor Pointer structure
  * within the specified range of physical addresses.
  */
-__attribute__((section(".boot"))) const AcpiRootSystemDescPointer *Acpi_searchRootSystemDescPointer(uintptr_t begin, uintptr_t end) {
+__attribute__((section(".boot"))) const AcpiRootSystemDescPointer *Acpi_searchRootSystemDescPointer(PhysicalAddress begin, PhysicalAddress end) {
     Log_printf("Searching for the ACPI Root System Descriptor Pointer structure at physical address [%p, %p).\n", begin, end);
-    assert((begin & 0xF) == 0); // the structure must be aligned to a 16-byte boundary
-    for ( ; begin < end; begin += 16) {
+    assert((begin.v & 0xF) == 0); // the structure must be aligned to a 16-byte boundary
+    for ( ; begin.v < end.v; begin.v += 16) {
         const AcpiRootSystemDescPointer *rsdptr = phys2virt(begin);
         if (memcmp(rsdptr->signature, "RSD PTR ", 8) == 0) {
             uint8_t checksum = 0;
@@ -118,9 +118,9 @@ __attribute__((section(".boot"))) const AcpiRootSystemDescPointer *Acpi_searchRo
 __attribute__((section(".boot"))) void Acpi_findConfig() {
     const AcpiRootSystemDescPointer *acpiRootSystemDescPointer = NULL;
     // Find the Root System Descriptor Pointer structure
-    uintptr_t ebda = ((uintptr_t) *(uint16_t *) phys2virt(0x40E)) << 4;
-    acpiRootSystemDescPointer = Acpi_searchRootSystemDescPointer(ebda, ebda + 1024);
-    if (acpiRootSystemDescPointer == NULL) acpiRootSystemDescPointer = Acpi_searchRootSystemDescPointer(0xE0000, 0x100000);
+    PhysicalAddress ebda = physicalAddress((uintptr_t) *(const uint16_t *) phys2virt(physicalAddress(0x40E)) << 4);
+    acpiRootSystemDescPointer = Acpi_searchRootSystemDescPointer(ebda, addToPhysicalAddress(ebda, 1024));
+    if (acpiRootSystemDescPointer == NULL) acpiRootSystemDescPointer = Acpi_searchRootSystemDescPointer(physicalAddress(0xE0000), physicalAddress(0x100000));
     if (acpiRootSystemDescPointer == NULL) {
         Log_printf("ACPI Root System Descriptor Pointer structure not found.\n");
         return;
@@ -130,17 +130,17 @@ __attribute__((section(".boot"))) void Acpi_findConfig() {
             acpiRootSystemDescPointer->rsdtPhysicalAddress, acpiRootSystemDescPointer->length,
             (uint32_t) acpiRootSystemDescPointer->xsdtPhysicalAddress, acpiRootSystemDescPointer->extendedChecksum);
     // Temporarily map memory with ACPI tables in two contiguous large pages right after the permamap region
-    PageTableEntry *pd = phys2virt((uintptr_t) &Boot_kernelPageDirectoryPhysicalAddress);
+    PageTableEntry *pd = phys2virt(physicalAddress((uintptr_t) &Boot_kernelPageDirectoryPhysicalAddress));
     uintptr_t acpiPhysicalBase = acpiRootSystemDescPointer->rsdtPhysicalAddress & ~0x3FFFFF;
-    pd[PERMAMAP_MEMORY_REGION_FRAME_END >> 10] = acpiPhysicalBase | ptLargePage | ptPresent;
-    pd[(PERMAMAP_MEMORY_REGION_FRAME_END >> 10) + 1] = (acpiPhysicalBase + 0x400000) | ptLargePage | ptPresent;
+    pd[PERMAMAP_MEMORY_REGION_FRAME_END.v >> 10] = acpiPhysicalBase | ptLargePage | ptPresent;
+    pd[(PERMAMAP_MEMORY_REGION_FRAME_END.v >> 10) + 1] = (acpiPhysicalBase + 0x400000) | ptLargePage | ptPresent;
     // Scan ACPI tables
     const AcpiRootSystemDescTable *rsdt = (const AcpiRootSystemDescTable *) (acpiRootSystemDescPointer->rsdtPhysicalAddress
-            - acpiPhysicalBase + (PERMAMAP_MEMORY_REGION_FRAME_END << PAGE_SHIFT));
+            - acpiPhysicalBase + (PERMAMAP_MEMORY_REGION_FRAME_END.v << PAGE_SHIFT));
     size_t entryCount = (rsdt->header.length - sizeof(AcpiDescriptionHeader)) / 4;
     for (size_t i = 0; i < entryCount; ++i) {
         const AcpiDescriptionHeader *header = (AcpiDescriptionHeader *) (rsdt->entries[i]
-                - acpiPhysicalBase + (PERMAMAP_MEMORY_REGION_FRAME_END << PAGE_SHIFT));
+                - acpiPhysicalBase + (PERMAMAP_MEMORY_REGION_FRAME_END.v << PAGE_SHIFT));
         Video_printf("  ACPI Root System Descriptor Table entry %i/%i at %p is '%.4s'.\n", i, entryCount, header, &header->signature);
         if (header->signature == 0x50434146) { // 'FACP' in little endian
             Acpi_fadt = *(const AcpiFadt *) header;
@@ -160,8 +160,8 @@ __attribute__((section(".boot"))) void Acpi_findConfig() {
         panic("ACPI FADT not found. Aborting.");
     }
     // Unmap memory with ACPI tables
-    pd[PERMAMAP_MEMORY_REGION_FRAME_END >> 10] = 0;
-    pd[(PERMAMAP_MEMORY_REGION_FRAME_END >> 10) + 1] = 0;
+    pd[PERMAMAP_MEMORY_REGION_FRAME_END.v >> 10] = 0;
+    pd[(PERMAMAP_MEMORY_REGION_FRAME_END.v >> 10) + 1] = 0;
     AddressSpace_invalidateTlb();
 }
 

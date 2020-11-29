@@ -1,6 +1,6 @@
 /*
 FreeDOS-32 kernel
-Copyright (C) 2008-2018  Salvatore ISAJA
+Copyright (C) 2008-2020  Salvatore ISAJA
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License version 2
@@ -32,11 +32,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  * Offsets and size of the Cpu, Thread and ThreadRegisters structs.
  * @{
  */
-#define CPU_LAPICID_OFFSET 0
-#define CPU_THISCPU_OFFSET 8
-#define CPU_CURRENTTHREAD_OFFSET 16
+#define CPU_LAPICID_OFFSET 4
+#define CPU_THISCPU_OFFSET 12
+#define CPU_CURRENTTHREAD_OFFSET 20
 #define CPU_IDLE_THREAD_STACK_SIZE 512
-#define CPU_IDLE_THREAD_STACK_OFFSET 596
+#define CPU_IDLE_THREAD_STACK_OFFSET 600
 #define CPU_STACK_OFFSET (CPU_IDLE_THREAD_STACK_OFFSET + CPU_IDLE_THREAD_STACK_SIZE)
 #define CPU_STRUCT_LOG_SIZE 12
 #define CPU_STRUCT_SIZE (1 << CPU_STRUCT_LOG_SIZE)

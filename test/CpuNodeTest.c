@@ -1,3 +1,20 @@
+/*
+FreeDOS-32 kernel
+Copyright (C) 2008-2020  Salvatore ISAJA
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License version 2
+as published by the Free Software Foundation.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
 #include "test.h"
 #include "kernel.h"
 
@@ -15,7 +32,7 @@ static void initCpu(Cpu *cpu, bool active, uint64_t scheduleArrival, Thread *cur
     cpu->nextThread = currentThread;
 }
 
-static void initCpuNode(CpuNode *node, Cpu *cpus, size_t cpuCount, uint64_t scheduleArrival) {
+static void initCpuNode(CpuNode *node, Cpu **cpus, size_t cpuCount, uint64_t scheduleArrival) {
     memzero(node, sizeof(CpuNode));
     node->cpus = cpus;
     node->cpuCount = cpuCount;
@@ -29,17 +46,21 @@ static void CpuNodeTest_findTargetCpu() {
     initThread(&threads[1], threadStateRunning, 100);
     initThread(&threads[2], threadStateRunning, 100);
     initThread(&threads[3], threadStateRunning, 50);        
-    Cpu cpus[4];
-    initCpu(&cpus[0], true, 1, &threads[0]);
-    initCpu(&cpus[1], true, 2, &threads[1]);
-    initCpu(&cpus[2], true, 3, &threads[2]);
-    initCpu(&cpus[3], true, 4, &threads[3]);
+    Cpu cpu0;
+    Cpu cpu1;
+    Cpu cpu2;
+    Cpu cpu3;
+    Cpu *cpus[] = { &cpu0, &cpu1, &cpu2, &cpu3 };
+    initCpu(&cpu0, true, 1, &threads[0]);
+    initCpu(&cpu1, true, 2, &threads[1]);
+    initCpu(&cpu2, true, 3, &threads[2]);
+    initCpu(&cpu3, true, 4, &threads[3]);
     CpuNode node;
     initCpuNode(&node, cpus, 4, 4);
     
     Cpu *targetCpu = CpuNode_findTargetCpu(&node, NULL);
     
-    ASSERT(targetCpu == &cpus[1]);
+    ASSERT(targetCpu == &cpu1);
 }
 
 static void CpuNodeTest_addRunnableThread_alreadyRunning() {
@@ -47,8 +68,9 @@ static void CpuNodeTest_addRunnableThread_alreadyRunning() {
     initThread(&currentThread, threadStateRunning, 100);
     Cpu cpu;
     initCpu(&cpu, true, 2, &currentThread);
+    Cpu *cpus[] = { &cpu };
     CpuNode node;
-    initCpuNode(&node, &cpu, 1, 2);
+    initCpuNode(&node, cpus, 1, 2);
     
     CpuNode_addRunnableThread(&node, &currentThread);
     
@@ -68,7 +90,8 @@ static void CpuNodeTest_addRunnableThread_higherPriority() {
     Cpu cpu;
     initCpu(&cpu, true, 2, &currentThread);
     CpuNode node;
-    initCpuNode(&node, &cpu, 1, 2);
+    Cpu *cpus[] = { &cpu };
+    initCpuNode(&node, cpus, 1, 2);
     theFakeHardware = (FakeHardware) { .currentCpu = &cpu };
     
     CpuNode_addRunnableThread(&node, &newThread);
@@ -92,7 +115,8 @@ static void CpuNodeTest_addRunnableThread_higherPriorityWithNextThread() {
     initCpu(&cpu, true, 2, &currentThread);
     cpu.nextThread = &nextThread;
     CpuNode node;
-    initCpuNode(&node, &cpu, 1, 2);
+    Cpu *cpus[] = { &cpu };
+    initCpuNode(&node, cpus, 1, 2);
     theFakeHardware = (FakeHardware) { .currentCpu = &cpu };
     
     CpuNode_addRunnableThread(&node, &newThread);
@@ -113,7 +137,8 @@ static void CpuNodeTest_addRunnableThread_lowerPriority() {
     Cpu cpu;
     initCpu(&cpu, true, 2, &currentThread);
     CpuNode node;
-    initCpuNode(&node, &cpu, 1, 2);
+    Cpu *cpus[] = { &cpu };
+    initCpuNode(&node, cpus, 1, 2);
     theFakeHardware = (FakeHardware) { .currentCpu = &cpu };
     
     CpuNode_addRunnableThread(&node, &newThread);
@@ -134,7 +159,8 @@ static void CpuNodeTest_addRunnableThread_samePriorityTimeSlicingDisabled() {
     Cpu cpu;
     initCpu(&cpu, true, 2, &currentThread);
     CpuNode node;
-    initCpuNode(&node, &cpu, 1, 2);
+    Cpu *cpus[] = { &cpu };
+    initCpuNode(&node, cpus, 1, 2);
     theFakeHardware = (FakeHardware) { .currentCpu = &cpu };
     
     CpuNode_addRunnableThread(&node, &newThread);

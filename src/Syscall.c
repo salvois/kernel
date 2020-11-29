@@ -1,6 +1,6 @@
 /*
 FreeDOS-32 kernel
-Copyright (C) 2008-2018  Salvatore ISAJA
+Copyright (C) 2008-2020  Salvatore ISAJA
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License version 2
@@ -28,7 +28,7 @@ int Syscall_createChannel(Task *task) {
     return Task_getCapabilityAddress(cap);
 }
 
-int Syscall_deleteCapability(Task *task, uintptr_t index) {
+int Syscall_deleteCapability(Task *task, PhysicalAddress index) {
     Capability *cap = Task_lookupCapability(task, index);
     if (cap == NULL) return -EINVAL;
     KobjType kobjType = Capability_getObjectType(cap);

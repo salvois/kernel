@@ -1,6 +1,6 @@
 /*
 FreeDOS-32 kernel
-Copyright (C) 2008-2018  Salvatore ISAJA
+Copyright (C) 2008-2020  Salvatore ISAJA
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License version 2
@@ -56,18 +56,18 @@ Capability *Task_allocateCapability(Task *task, uintptr_t obj, uintptr_t badge) 
  * @param index Index of the capability to look up.
  * @return Pointer to the index-th capability of the task, or NULL index exceeds the size of the capability space.
  */
-Capability *Task_lookupCapability(Task *task, uintptr_t address) {
-    uintptr_t fn = floorToFrame(address);
-    if (fn >= PhysicalMemory_totalMemoryFrames) return NULL;
-    Frame *fd = &PhysicalMemory_frameDescriptors[fn];
-    if (fd->task != task || fd->metadata != (size_t) &task->capabilitySpace) return NULL;
-    return phys2virt(address & ~0xF);
+Capability *Task_lookupCapability(Task *task, PhysicalAddress address) {
+    FrameNumber frameNumber = floorToFrame(address);
+    if (frameNumber.v >= PhysicalMemory_totalMemoryFrames) return NULL;
+    Frame *frame = getFrame(frameNumber);
+    if (frame->task != task || frame->virtualAddress.v != VIRTUAL_ADDRESS_CAPABILITY_SPACE.v) return NULL;
+    return phys2virt(physicalAddress(address.v & ~0xF));
 }
 
 uintptr_t Task_getCapabilityAddress(const Capability *cap) {
-    uintptr_t a = virt2phys(cap);
-    assert((a & 0xF) == 0);
-    return a;
+    PhysicalAddress a = virt2phys(cap);
+    assert((a.v & 0xF) == 0);
+    return a.v;
 }
 
 void Task_deallocateCapability(Task *task, Capability *cap) {

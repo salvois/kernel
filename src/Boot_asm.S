@@ -1,6 +1,6 @@
 /*
 FreeDOS-32 kernel
-Copyright (C) 2008-2018  Salvatore ISAJA
+Copyright (C) 2008-2020  Salvatore ISAJA
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License version 2
@@ -76,9 +76,7 @@ apHigherHalfEntry:
     je 3f # CPU not found, should never happen
     mov CPU_LAPIC_VIRTUAL_ADDRESS + 0x20, %eax # Read LAPIC ID register
     shrl $24, %eax # eax = LAPIC ID
-    mov %ecx, %esi
-    shl $CPU_STRUCT_LOG_SIZE, %esi
-    add CSYMBOL(Cpu_cpus), %esi # Cpu* esi = &Cpu_cpus[ecx]
+    movl CSYMBOL(Cpu_cpus)(,%ecx,4), %esi # Cpu *esi = Cpu_cpus[ecx]
     cmpl %eax, CPU_LAPICID_OFFSET(%esi) # Compare the current LAPIC ID against esi->lapicId
     je 2f
     incl %ecx

@@ -1,6 +1,6 @@
 /*
 FreeDOS-32 kernel
-Copyright (C) 2008-2018  Salvatore ISAJA
+Copyright (C) 2008-2020  Salvatore ISAJA
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License version 2
@@ -335,7 +335,7 @@ void ElfLoader_fromMultibootModule(ElfLoader *el, uintptr_t begin, uint32_t end,
  * It must be called with while holding the spinlock of the CPU node and it
  * will keep it locked for a long time!
  */
-void ElfLoader_fromExeMultibootModule(Task *task, uintptr_t begin, uint32_t end, const char *commandLine) {
+void ElfLoader_fromExeMultibootModule(Task *task, PhysicalAddress begin, PhysicalAddress end, const char *commandLine) {
     unsigned priority = 64;
     unsigned nice = 20;
     // Quick and dirty command line parser
@@ -366,15 +366,15 @@ void ElfLoader_fromExeMultibootModule(Task *task, uintptr_t begin, uint32_t end,
         Log_printf("  Not an executable file.\n");
         return;
     }
-    uintptr_t a = begin + ehdr->e_phoff;
-    for (size_t i = 0; i < ehdr->e_phnum; i++, a += ehdr->e_phentsize) {
+    PhysicalAddress a = addToPhysicalAddress(begin, ehdr->e_phoff);
+    for (size_t i = 0; i < ehdr->e_phnum; i++, a.v += ehdr->e_phentsize) {
         const Elf32_Phdr *phdr = phys2virt(a);
         if (phdr->p_type != 1) continue; // Skip if not PT_LOAD, loadable segment
         Log_printf("  Segment %d is loadable, Offset=0x%08X, VirtAddr=%p, PhysAddr=%p, FileSize=0x%08X, MemSize=0x%08X, Flags=0x%08X, Align=0x%08X\n",
                 i, phdr->p_offset, phdr->p_vaddr, phdr->p_paddr, phdr->p_filesz, phdr->p_memsz, phdr->p_flags, phdr->p_align);
         for (size_t j = 0; j < phdr->p_memsz; j += PAGE_SIZE) {
             if (j < phdr->p_filesz) {
-                AddressSpace_map(task, phdr->p_vaddr + j, (begin + phdr->p_offset + j) >> PAGE_SHIFT);
+                AddressSpace_map(task, phdr->p_vaddr + j, floorToFrame(addToPhysicalAddress(begin, + phdr->p_offset + j)));
                 if (j + PAGE_SIZE >= phdr->p_filesz) {
                     //memzero(phdr->p_vaddr + j);
                 }

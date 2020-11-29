@@ -23,6 +23,7 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+#include "stddef.h"
 #include "LinkedList.h"
 
 void LinkedList_initialize(LinkedList_Node *sentinelNode) {
@@ -47,4 +48,6 @@ void LinkedList_insertAfter(LinkedList_Node *node, LinkedList_Node *position) {
 void LinkedList_remove(LinkedList_Node *node) {
     node->prev->next = node->next;
     node->next->prev = node->prev;
+    node->prev = NULL;
+    node->next = NULL;
 }
