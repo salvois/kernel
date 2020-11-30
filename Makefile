@@ -1,4 +1,4 @@
-CFLAGS = -Wall -O3 -m32 -std=gnu99 -pedantic-errors -nostdinc -nostartfiles -nostdlib -fno-builtin -fno-asynchronous-unwind-tables -Iinclude -Isrc/hardware
+CFLAGS = -Wall -O3 -m32 -std=gnu99 -pedantic-errors -nostdinc -nostartfiles -nostdlib -fno-builtin -fno-asynchronous-unwind-tables -Isrc -Iinclude -Isrc/hardware
 ASMSOURCES = src/Boot_asm.S src/Cpu_asm.S
 CSOURCES = src/Boot.c \
   src/Acpi.c \
@@ -27,7 +27,7 @@ CSOURCES = src/Boot.c \
 OBJECTS = $(patsubst src/%.S, build/%.o, $(ASMSOURCES)) $(patsubst src/%.c, build/%.o, $(CSOURCES))
 DEMOS_CFLAGS = -m32 -nostdlib -fno-asynchronous-unwind-tables -no-pie -fno-pie -s -Iinclude
 DEMOS = build/EndlessLoop build/Sysenter
-TESTS_CFLAGS = -Wall -g -m32 -std=gnu99 -pedantic-errors -nostdinc -fno-builtin -Iinclude -Itest/hardware
+TESTS_CFLAGS = -Wall -g -m32 -std=gnu99 -pedantic-errors -nostdinc -fno-builtin -Isrc -Iinclude -Itest/hardware
 
 .PHONY: all clean Release cleanRelease build-tests test
 

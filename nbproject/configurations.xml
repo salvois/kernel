@@ -4,9 +4,26 @@
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
                    projectFiles="true">
+      <itemPath>src/Acpi.h</itemPath>
+      <itemPath>src/AddressSpace.h</itemPath>
       <itemPath>include/AtomicWord.h</itemPath>
-      <itemPath>include/LinkedList.h</itemPath>
+      <itemPath>src/Cpu.h</itemPath>
+      <itemPath>src/ElfLoader.h</itemPath>
+      <itemPath>src/Formatter.h</itemPath>
+      <itemPath>src/LapicTimer.h</itemPath>
+      <itemPath>src/LinkedList.h</itemPath>
+      <itemPath>src/MultiProcessorSpecification.h</itemPath>
+      <itemPath>src/Multiboot.h</itemPath>
       <itemPath>include/NaryTrie.h</itemPath>
+      <itemPath>src/PhysicalMemory.h</itemPath>
+      <itemPath>src/PriorityQueue.h</itemPath>
+      <itemPath>src/SlabAllocator.h</itemPath>
+      <itemPath>src/Spinlock.h</itemPath>
+      <itemPath>src/Syscall.h</itemPath>
+      <itemPath>src/Task.h</itemPath>
+      <itemPath>src/Thread.h</itemPath>
+      <itemPath>src/Tsc.h</itemPath>
+      <itemPath>src/Types.h</itemPath>
       <itemPath>include/assert.h</itemPath>
       <itemPath>include/errno.h</itemPath>
       <itemPath>include/kernel.h</itemPath>
@@ -95,6 +112,7 @@
         <cTool>
           <architecture>1</architecture>
           <incDir>
+            <pElem>src</pElem>
             <pElem>include</pElem>
           </incDir>
           <commandLine>-Wall -std=gnu99</commandLine>
@@ -121,8 +139,6 @@
       </folder>
       <item path="include/AtomicWord.h" ex="false" tool="3" flavor2="0">
       </item>
-      <item path="include/LinkedList.h" ex="false" tool="3" flavor2="0">
-      </item>
       <item path="include/NaryTrie.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="include/assert.h" ex="false" tool="3" flavor2="0">
@@ -147,7 +163,11 @@
       </item>
       <item path="src/Acpi.c" ex="false" tool="0" flavor2="0">
       </item>
+      <item path="src/Acpi.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="src/AddressSpace.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/AddressSpace.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/Boot.c" ex="false" tool="0" flavor2="0">
       </item>
@@ -157,23 +177,39 @@
       </item>
       <item path="src/Cpu.c" ex="false" tool="0" flavor2="0">
       </item>
+      <item path="src/Cpu.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="src/CpuNode.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="src/Cpu_asm.S" ex="false" tool="4" flavor2="0">
       </item>
       <item path="src/ElfLoader.c" ex="false" tool="0" flavor2="0">
       </item>
+      <item path="src/ElfLoader.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="src/Formatter.c" ex="false" tool="0" flavor2="0">
       </item>
+      <item path="src/Formatter.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="src/LapicTimer.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/LapicTimer.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/Libc.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="src/LinkedList.c" ex="false" tool="0" flavor2="0">
       </item>
+      <item path="src/LinkedList.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/MultiProcessorSpecification.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="src/Multiboot.c" ex="false" tool="0" flavor2="0">
       </item>
+      <item path="src/Multiboot.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="src/PhysicalMemory.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/PhysicalMemory.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/Pic8259.c" ex="false" tool="0" flavor2="0">
       </item>
@@ -181,17 +217,33 @@
       </item>
       <item path="src/PriorityQueue.c" ex="false" tool="0" flavor2="0">
       </item>
+      <item path="src/PriorityQueue.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="src/Rs232Log.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="src/SlabAllocator.c" ex="false" tool="0" flavor2="0">
       </item>
+      <item path="src/SlabAllocator.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/Spinlock.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="src/Syscall.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/Syscall.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/Task.c" ex="false" tool="0" flavor2="0">
       </item>
+      <item path="src/Task.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="src/Thread.c" ex="false" tool="0" flavor2="0">
       </item>
+      <item path="src/Thread.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="src/Tsc.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/Tsc.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/Types.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/Util.c" ex="false" tool="0" flavor2="0">
       </item>
@@ -270,8 +322,6 @@
       </folder>
       <item path="include/AtomicWord.h" ex="false" tool="3" flavor2="0">
       </item>
-      <item path="include/LinkedList.h" ex="false" tool="3" flavor2="0">
-      </item>
       <item path="include/NaryTrie.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="include/assert.h" ex="false" tool="3" flavor2="0">
@@ -296,7 +346,11 @@
       </item>
       <item path="src/Acpi.c" ex="false" tool="0" flavor2="0">
       </item>
+      <item path="src/Acpi.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="src/AddressSpace.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/AddressSpace.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/Boot.c" ex="false" tool="0" flavor2="0">
       </item>
@@ -306,23 +360,39 @@
       </item>
       <item path="src/Cpu.c" ex="false" tool="0" flavor2="0">
       </item>
+      <item path="src/Cpu.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="src/CpuNode.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="src/Cpu_asm.S" ex="false" tool="4" flavor2="0">
       </item>
       <item path="src/ElfLoader.c" ex="false" tool="0" flavor2="0">
       </item>
+      <item path="src/ElfLoader.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="src/Formatter.c" ex="false" tool="0" flavor2="0">
       </item>
+      <item path="src/Formatter.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="src/LapicTimer.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/LapicTimer.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/Libc.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="src/LinkedList.c" ex="false" tool="0" flavor2="0">
       </item>
+      <item path="src/LinkedList.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/MultiProcessorSpecification.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="src/Multiboot.c" ex="false" tool="0" flavor2="0">
       </item>
+      <item path="src/Multiboot.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="src/PhysicalMemory.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/PhysicalMemory.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/Pic8259.c" ex="false" tool="0" flavor2="0">
       </item>
@@ -330,17 +400,33 @@
       </item>
       <item path="src/PriorityQueue.c" ex="false" tool="0" flavor2="0">
       </item>
+      <item path="src/PriorityQueue.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="src/Rs232Log.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="src/SlabAllocator.c" ex="false" tool="0" flavor2="0">
       </item>
+      <item path="src/SlabAllocator.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/Spinlock.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="src/Syscall.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/Syscall.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/Task.c" ex="false" tool="0" flavor2="0">
       </item>
+      <item path="src/Task.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="src/Thread.c" ex="false" tool="0" flavor2="0">
       </item>
+      <item path="src/Thread.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="src/Tsc.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="src/Tsc.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="src/Types.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/Util.c" ex="false" tool="0" flavor2="0">
       </item>

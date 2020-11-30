@@ -16,6 +16,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 #include "kernel.h"
+#include "PhysicalMemory.h"
 
 // Memory addresses of the Multiboot kernel image defined by the linker
 extern uint8_t Boot_imageBeginPhysicalAddress;

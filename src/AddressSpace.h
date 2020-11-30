@@ -15,25 +15,16 @@ You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
-#ifndef KERNEL_H_INCLUDED
-#define	KERNEL_H_INCLUDED
+#ifndef ADDRESSSPACE_H_INCLUDED
+#define ADDRESSSPACE_H_INCLUDED
 
 #include "Types.h"
-#include "hardware.h"
-#include "Acpi.h"
-#include "AddressSpace.h"
-#include "Cpu.h"
-#include "ElfLoader.h"
-#include "Formatter.h"
-#include "LapicTimer.h"
-#include "Multiboot.h"
-#include "MultiProcessorSpecification.h"
 #include "PhysicalMemory.h"
-#include "PriorityQueue.h"
-#include "SlabAllocator.h"
-#include "Spinlock.h"
-#include "Task.h"
-#include "Thread.h"
-#include "Tsc.h"
+
+int  AddressSpace_initialize(Task *task);
+int  AddressSpace_map(Task *task, uintptr_t virtualAddress, FrameNumber frameNumber);
+int  AddressSpace_mapCopy(Task *destTask, uintptr_t destVirt, Task *srcTask, uintptr_t srcVirt);
+int  AddressSpace_mapFromNewFrame(Task *task, uintptr_t virtualAddress, PhysicalMemoryRegionType preferredRegion);
+void AddressSpace_unmap(Task *task, uintptr_t virtualAddress, uintptr_t payload);
 
 #endif
