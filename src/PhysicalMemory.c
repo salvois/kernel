@@ -19,6 +19,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 /** Table of descriptors for each frame of all installed physical memory. */
 Frame *PhysicalMemory_frameDescriptors;
+/** Frame number of the first frame in PhysicalMemory_frameDescriptors, usually 0 except in tests. */
+FrameNumber PhysicalMemory_firstFrame;
 /** Number of frames of all installed physical memory. */
 size_t PhysicalMemory_totalMemoryFrames;
 /** Descriptors for each region specified by enum PhysicalMemoryRegionType. */
@@ -33,7 +35,7 @@ static Task dummyTaskToIdentifyFreeFrames;
 
 __attribute__((section(".boot")))
 void PhysicalMemoryRegion_initialize(PhysicalMemoryRegion *pmr, FrameNumber begin, FrameNumber end) {
-    assert(begin.v < end.v);
+    assert(begin.v <= end.v);
     LinkedList_initialize(&pmr->freeListHead);
     pmr->begin = begin;
     pmr->end = end;

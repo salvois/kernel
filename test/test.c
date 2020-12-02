@@ -26,6 +26,7 @@ extern void PriorityQueueTest_run();
 extern void LinkedListTest_run();
 extern void PhysicalMemoryTest_run();
 extern void MultibootTest_run();
+extern void SlabAllocatorTest_run();
 
 int Log_printf(const char *format, ...) { return 0; }
 void panic(const char *format, ...) { }
@@ -38,5 +39,6 @@ int main() {
     RUN_SUITE(LinkedListTest_run);
     RUN_SUITE(PhysicalMemoryTest_run);
     RUN_SUITE(MultibootTest_run);
+    RUN_SUITE(SlabAllocatorTest_run);
     return exitCode;
 }

@@ -65,6 +65,7 @@ typedef struct Frame {
 #define VIRTUAL_ADDRESS_CAPABILITY_SPACE ((VirtualAddress) { 1 })
 
 extern Frame *PhysicalMemory_frameDescriptors;
+extern FrameNumber PhysicalMemory_firstFrame;
 extern size_t PhysicalMemory_totalMemoryFrames;
 extern PhysicalMemoryRegion PhysicalMemory_regions[physicalMemoryRegionCount];
 
@@ -78,11 +79,11 @@ static inline Frame *Frame_fromNode(LinkedList_Node *node) {
 }
 
 static inline FrameNumber getFrameNumber(const Frame *frame) {
-    return frameNumber((uintptr_t) (frame - PhysicalMemory_frameDescriptors));
+    return frameNumber((uintptr_t) (frame - PhysicalMemory_frameDescriptors) + PhysicalMemory_firstFrame.v);
 }
 
 static inline Frame *getFrame(FrameNumber frameNumber) {
-    return &PhysicalMemory_frameDescriptors[frameNumber.v];
+    return &PhysicalMemory_frameDescriptors[frameNumber.v - PhysicalMemory_firstFrame.v];
 }
 
 /** Rounds the specified physical address down to a frame number. */

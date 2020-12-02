@@ -1,6 +1,7 @@
 CFLAGS = -Wall -O3 -m32 -std=gnu99 -pedantic-errors -nostdinc -nostartfiles -nostdlib -fno-builtin -fno-asynchronous-unwind-tables -Isrc -Iinclude -Isrc/hardware
 ASMSOURCES = src/Boot_asm.S src/Cpu_asm.S
-CSOURCES = src/Boot.c \
+CSOURCES = \
+  src/Boot.c \
   src/Acpi.c \
   src/Boot_Cpu.c \
   src/AddressSpace.c \
@@ -24,6 +25,25 @@ CSOURCES = src/Boot.c \
   src/Tsc.c \
   src/Util.c \
   src/Video.c
+TESTS_CSOURCES = \
+  src/Cpu.c \
+  src/CpuNode.c \
+  src/Libc.c \
+  src/LinkedList.c \
+  src/Multiboot.c \
+  src/PriorityQueue.c \
+  src/PhysicalMemory.c \
+  src/SlabAllocator.c \
+  test/hardware/hardware.c \
+  test/LibcTest.c \
+  test/LinkedListTest.c \
+  test/MultibootTest.c \
+  test/CpuNodeTest.c \
+  test/CpuTest.c \
+  test/PriorityQueueTest.c \
+  test/PhysicalMemoryTest.c \
+  test/SlabAllocatorTest.c \
+  test/test.c
 OBJECTS = $(patsubst src/%.S, build/%.o, $(ASMSOURCES)) $(patsubst src/%.c, build/%.o, $(CSOURCES))
 DEMOS_CFLAGS = -m32 -nostdlib -fno-asynchronous-unwind-tables -no-pie -fno-pie -s -Iinclude
 DEMOS = build/EndlessLoop build/Sysenter
@@ -45,7 +65,7 @@ clean:
 	rm -f build/*
 	
 build-tests:
-	$(CC) $(TESTS_CFLAGS) src/Cpu.c src/CpuNode.c src/Libc.c src/LinkedList.c src/Multiboot.c src/PriorityQueue.c src/PhysicalMemory.c test/hardware/hardware.c test/LibcTest.c test/LinkedListTest.c test/MultibootTest.c test/CpuNodeTest.c test/CpuTest.c test/PriorityQueueTest.c test/PhysicalMemoryTest.c test/test.c -o build/test
+	$(CC) $(TESTS_CFLAGS) $(TESTS_CSOURCES) -o build/test
 	
 test: build-tests
 	./build/test

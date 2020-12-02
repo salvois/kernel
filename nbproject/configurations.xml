@@ -85,6 +85,7 @@
         <itemPath>test/MultibootTest.c</itemPath>
         <itemPath>test/PhysicalMemoryTest.c</itemPath>
         <itemPath>test/PriorityQueueTest.c</itemPath>
+        <itemPath>test/SlabAllocatorTest.c</itemPath>
         <itemPath>test/hardware/hardware.c</itemPath>
         <itemPath>test/hardware/hardware.h</itemPath>
         <itemPath>test/test.c</itemPath>
@@ -266,6 +267,8 @@
       <item path="test/PhysicalMemoryTest.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="test/PriorityQueueTest.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="test/SlabAllocatorTest.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="test/hardware/hardware.c" ex="false" tool="0" flavor2="0">
       </item>
@@ -449,6 +452,8 @@
       <item path="test/PhysicalMemoryTest.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="test/PriorityQueueTest.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="test/SlabAllocatorTest.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="test/hardware/hardware.c" ex="false" tool="0" flavor2="0">
       </item>
