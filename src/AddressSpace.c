@@ -36,7 +36,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define PAGE_TABLE_SHIFT 10
 #define PAGE_TABLE_LENGTH (1 << PAGE_TABLE_SHIFT)
 
-static PageTableEntry *getPageTableEntry(PageTableEntry pte) {
+static PageTable *resolvePageTableEntry(PageTableEntry pte) {
     return phys2virt(physicalAddress(pte & ~(PAGE_SIZE - 1)));
 }
 
@@ -48,11 +48,9 @@ static PageTableEntry *getPageTableEntry(PageTableEntry pte) {
 int AddressSpace_initialize(Task *task) {
     FrameNumber rootFrame = PhysicalMemory_allocate(task, permamapMemoryRegion);
     if (rootFrame.v == 0) return -ENOMEM;
-    const PageTableEntry *kernelPageDirectory = getPageTableEntry((uintptr_t) &Boot_kernelPageDirectoryPhysicalAddress);
-    PageTableEntry *pd = frame2virt(rootFrame);
+    PageTable *pd = frame2virt(rootFrame);
     memzero(pd, PAGE_SIZE - 1024);
-    memcpy(&pd[768], &kernelPageDirectory[768], 1024);
-    //for (int i = 0; i < 1024; i++) LOG_PRINTF("Page directory %i: %08X\n", i, pd[i]);
+    memcpy(&pd->entries[768], &Boot_kernelPageDirectory.entries[768], 1024);
     task->addressSpace.root = rootFrame.v << PAGE_SHIFT;
     task->addressSpace.tlbShootdownPageCount = 0;
     LinkedList_initialize(&task->addressSpace.shootdownFrameListHead);
@@ -65,40 +63,40 @@ int AddressSpace_initialize(Task *task) {
  * @param virtualAddress Virtual address the mapping is being removed from.
  * @param frame Frame number of the frame being unmapped.
  */
-static void AddressSpace_enqueueShootdownFrame(Task *task, uintptr_t virtualAddress, uintptr_t frame) {
+static void AddressSpace_enqueueShootdownFrame(Task *task, VirtualAddress virtualAddress, FrameNumber frameNumber) {
     if (task->addressSpace.tlbShootdownPageCount < TASK_MAX_TLB_SHOOTDOWN_PAGES) {
         task->addressSpace.tlbShootdownPages[task->addressSpace.tlbShootdownPageCount] = virtualAddress;
     }
     task->addressSpace.tlbShootdownPageCount++;
-    Frame *f = &PhysicalMemory_frameDescriptors[frame];
+    Frame *f = getFrame(frameNumber);
     LinkedList_insertBefore(&f->node, &task->addressSpace.shootdownFrameListHead);
 }
 
-static PageTableEntry* AddressSpace_findLeaf(Task *task, uintptr_t virtualAddress) {
-    PageTableEntry *table = getPageTableEntry(task->addressSpace.root);
+static PageTable* AddressSpace_findLeaf(Task *task, VirtualAddress virtualAddress) {
+    PageTable *table = resolvePageTableEntry(task->addressSpace.root);
     int height = ADDRESSSPACE_HEIGHT;
     while (height > 0) {
-        uintptr_t subindex = virtualAddress >> ((height - 1) * PAGE_TABLE_SHIFT + PAGE_SHIFT) & (PAGE_TABLE_LENGTH - 1);
-        if ((table[subindex] & ptPresent) == 0) return NULL;
-        table = getPageTableEntry(table[subindex]);
+        size_t subindex = virtualAddress.v >> ((height - 1) * PAGE_TABLE_SHIFT + PAGE_SHIFT) & (PAGE_TABLE_LENGTH - 1);
+        if ((table->entries[subindex] & ptPresent) == 0) return NULL;
+        table = resolvePageTableEntry(table->entries[subindex]);
         height--;
     }
     return table;
 }
 
-static PageTableEntry *AddressSpace_findLeafAllocating(Task *task, uintptr_t virtualAddress) {
-    PageTableEntry *table = getPageTableEntry(task->addressSpace.root);
+static PageTable *AddressSpace_findLeafAllocating(Task *task, VirtualAddress virtualAddress) {
+    PageTable *table = resolvePageTableEntry(task->addressSpace.root);
     int height = ADDRESSSPACE_HEIGHT;
     while (height > 0) {
-        uintptr_t subindex = virtualAddress >> (height * PAGE_TABLE_SHIFT + PAGE_SHIFT) & (PAGE_TABLE_LENGTH - 1);
-        if ((table[subindex] & ptPresent) == 0) {
+        size_t subindex = virtualAddress.v >> (height * PAGE_TABLE_SHIFT + PAGE_SHIFT) & (PAGE_TABLE_LENGTH - 1);
+        if ((table->entries[subindex] & ptPresent) == 0) {
             FrameNumber frameNumber = PhysicalMemory_allocate(task, permamapMemoryRegion);
             if (frameNumber.v == 0) return NULL;
-            PageTableEntry *subtable = frame2virt(frameNumber);
-            memzero(subtable, PAGE_SIZE);
-            table[subindex] = frameNumber.v << PAGE_SHIFT | ptPresent | ptWriteable | ptUser;
+            PageTable *subtable = frame2virt(frameNumber);
+            memzero(subtable, sizeof(PageTable));
+            table->entries[subindex] = frameNumber.v << PAGE_SHIFT | ptPresent | ptWriteable | ptUser;
         }
-        table = getPageTableEntry(table[subindex]);
+        table = resolvePageTableEntry(table->entries[subindex]);
         height--;
     }
     return table;
@@ -128,15 +126,15 @@ static void AddressSpace_initiateTlbShootdown(Task *task) {
  * @param frame Frame number to map.
  * @return 0 on success, or a negative error code.
  */
-int AddressSpace_map(Task *task, uintptr_t virtualAddress, FrameNumber frameNumber) {
-    ADDRESSSPACE_LOG_PRINTF("Mapping virtual address %p to frame %p for task %p (address space root=%p).\n", virtualAddress, frameNumber.v, task, task->addressSpace.root);
-    PageTableEntry *pt = AddressSpace_findLeafAllocating(task, virtualAddress);
+int AddressSpace_map(Task *task, VirtualAddress virtualAddress, FrameNumber fn) {
+    ADDRESSSPACE_LOG_PRINTF("Mapping virtual address %p to frame %p for task %p (address space root=%p).\n", virtualAddress, fn.v, task, task->addressSpace.root);
+    PageTable *pt = AddressSpace_findLeafAllocating(task, virtualAddress);
     if (pt == NULL) return -ENOMEM;
-    size_t index = virtualAddress >> PAGE_SHIFT & (PAGE_TABLE_LENGTH - 1);
-    if (pt[index] & ptPresent) {
-        AddressSpace_enqueueShootdownFrame(task, virtualAddress, pt[index] >> PAGE_SHIFT);
+    size_t index = virtualAddress.v >> PAGE_SHIFT & (PAGE_TABLE_LENGTH - 1);
+    if (pt->entries[index] & ptPresent) {
+        AddressSpace_enqueueShootdownFrame(task, virtualAddress, frameNumber(pt->entries[index] >> PAGE_SHIFT));
     }
-    pt[index] = frameNumber.v << PAGE_SHIFT | ptPresent | ptWriteable | ptUser;
+    pt->entries[index] = fn.v << PAGE_SHIFT | ptPresent | ptWriteable | ptUser;
     if (task->addressSpace.tlbShootdownPageCount > 0) {
         AddressSpace_initiateTlbShootdown(task);
     }
@@ -152,17 +150,17 @@ int AddressSpace_map(Task *task, uintptr_t virtualAddress, FrameNumber frameNumb
  * @param count Number of pages to map.
  * @return 0 on success, or a negative error code.
  */
-int AddressSpace_mapCopy(Task *destTask, uintptr_t destVirt, Task *srcTask, uintptr_t srcVirt) {
-    PageTableEntry *srcPt = AddressSpace_findLeaf(srcTask, srcVirt);
+int AddressSpace_mapCopy(Task *destTask, VirtualAddress destVirt, Task *srcTask, VirtualAddress srcVirt) {
+    PageTable *srcPt = AddressSpace_findLeaf(srcTask, srcVirt);
     if (srcPt == NULL) return -EFAULT;
-    size_t srcIndex = srcVirt >> PAGE_SHIFT & (PAGE_TABLE_LENGTH - 1);
-    PageTableEntry *destPt = AddressSpace_findLeafAllocating(destTask, destVirt);
+    size_t srcIndex = srcVirt.v >> PAGE_SHIFT & (PAGE_TABLE_LENGTH - 1);
+    PageTable *destPt = AddressSpace_findLeafAllocating(destTask, destVirt);
     if (destPt == NULL) return -ENOMEM;
-    size_t destIndex = destVirt >> PAGE_SHIFT & (PAGE_TABLE_LENGTH - 1);
-    if (destPt[destIndex] & ptPresent) {
-        AddressSpace_enqueueShootdownFrame(destTask, destVirt, destPt[destIndex] >> PAGE_SHIFT);
+    size_t destIndex = destVirt.v >> PAGE_SHIFT & (PAGE_TABLE_LENGTH - 1);
+    if (destPt->entries[destIndex] & ptPresent) {
+        AddressSpace_enqueueShootdownFrame(destTask, destVirt, frameNumber(destPt->entries[destIndex] >> PAGE_SHIFT));
     }
-    destPt[destIndex] = srcPt[srcIndex];
+    destPt->entries[destIndex] = srcPt->entries[srcIndex];
     if (destTask->addressSpace.tlbShootdownPageCount > 0) {
         AddressSpace_initiateTlbShootdown(destTask);
     }
@@ -177,7 +175,7 @@ int AddressSpace_mapCopy(Task *destTask, uintptr_t destVirt, Task *srcTask, uint
  * @param virtualAddress Virtual address to mapping into.
  * @return 0 on success, or a negative error code.
  */
-int AddressSpace_mapFromNewFrame(Task *task, uintptr_t virtualAddress, PhysicalMemoryRegionType preferredRegion) {
+int AddressSpace_mapFromNewFrame(Task *task, VirtualAddress virtualAddress, PhysicalMemoryRegionType preferredRegion) {
     FrameNumber frameNumber = PhysicalMemory_allocate(task, preferredRegion);
     if (frameNumber.v == 0) return -ENOMEM;
 //    memzero(frame2virt(frame), PAGE_SIZE);
@@ -195,15 +193,15 @@ int AddressSpace_mapFromNewFrame(Task *task, uintptr_t virtualAddress, PhysicalM
  * @param virtualAddress Virtual address to unmap.
  * @param payload Word to insert into the non-present page (e.g. for swapping). Bit 0 must be clear.
  */
-void AddressSpace_unmap(Task *task, uintptr_t virtualAddress, uintptr_t payload) {
+void AddressSpace_unmap(Task *task, VirtualAddress virtualAddress, uintptr_t payload) {
     assert((payload & ptPresent) == 0);
-    size_t index = virtualAddress >> PAGE_SHIFT & (PAGE_TABLE_LENGTH - 1);
-    PageTableEntry *pt = AddressSpace_findLeaf(task, virtualAddress);
+    size_t index = virtualAddress.v >> PAGE_SHIFT & (PAGE_TABLE_LENGTH - 1);
+    PageTable *pt = AddressSpace_findLeaf(task, virtualAddress);
     if (pt == NULL) return;
-    if (pt[index] & ptPresent) {
-        AddressSpace_enqueueShootdownFrame(task, virtualAddress, pt[index] >> PAGE_SHIFT);
+    if (pt->entries[index] & ptPresent) {
+        AddressSpace_enqueueShootdownFrame(task, virtualAddress, frameNumber(pt->entries[index] >> PAGE_SHIFT));
     }
-    pt[index] = payload;
+    pt->entries[index] = payload;
     if (task->addressSpace.tlbShootdownPageCount > 0) {
         AddressSpace_initiateTlbShootdown(task);
     }

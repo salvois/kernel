@@ -32,6 +32,8 @@ typedef struct FakeHardware {
     uint32_t lapicTimerCurrentCount;
     uint32_t lapicTimerDivider;
     AddressSpace *currentAddressSpace;
+    int tlbInvalidationCount;
+    VirtualAddress lastTlbInvalidationAddress;
     uint32_t fsRegister;
     uint32_t gsRegister;
     uint32_t ldtRegister;
@@ -73,6 +75,14 @@ static inline Cpu *Cpu_getCurrent() {
 
 static inline void AddressSpace_activate(AddressSpace *as) {
     theFakeHardware.currentAddressSpace = as;
+}
+
+static inline void AddressSpace_invalidateTlb() {
+    theFakeHardware.tlbInvalidationCount++;
+}
+
+static inline void AddressSpace_invalidateTlbAddress(VirtualAddress a) {
+    theFakeHardware.lastTlbInvalidationAddress = a;
 }
 
 static inline uint64_t Tsc_read() {

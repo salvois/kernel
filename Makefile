@@ -26,6 +26,7 @@ CSOURCES = \
   src/Util.c \
   src/Video.c
 TESTS_CSOURCES = \
+  src/AddressSpace.c \
   src/Cpu.c \
   src/CpuNode.c \
   src/Libc.c \
@@ -35,6 +36,7 @@ TESTS_CSOURCES = \
   src/PhysicalMemory.c \
   src/SlabAllocator.c \
   test/hardware/hardware.c \
+  test/AddressSpaceTest.c \
   test/LibcTest.c \
   test/LinkedListTest.c \
   test/MultibootTest.c \

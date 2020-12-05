@@ -17,6 +17,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 #include "kernel.h"
 
+/** Global table of Cpu structures in use, each representing a logical processor. */
+Cpu *Cpu_cpus[MAX_CPU_COUNT];
+/** Global count of Cpu structures in use. */
+size_t Cpu_cpuCount;
 /** Global table of interrupt service routines for each interrupt number. */
 static IsrTableEntry Cpu_isrTable[256];
 /**

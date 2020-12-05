@@ -131,7 +131,7 @@ __attribute__((section(".boot"))) void Acpi_findConfig() {
             acpiRootSystemDescPointer->rsdtPhysicalAddress, acpiRootSystemDescPointer->length,
             (uint32_t) acpiRootSystemDescPointer->xsdtPhysicalAddress, acpiRootSystemDescPointer->extendedChecksum);
     // Temporarily map memory with ACPI tables in two contiguous large pages right after the permamap region
-    PageTableEntry *pd = phys2virt(physicalAddress((uintptr_t) &Boot_kernelPageDirectoryPhysicalAddress));
+    PageTableEntry *pd = (PageTableEntry *) &Boot_kernelPageDirectory;
     uintptr_t acpiPhysicalBase = acpiRootSystemDescPointer->rsdtPhysicalAddress & ~0x3FFFFF;
     pd[PERMAMAP_MEMORY_REGION_FRAME_END.v >> 10] = acpiPhysicalBase | ptLargePage | ptPresent;
     pd[(PERMAMAP_MEMORY_REGION_FRAME_END.v >> 10) + 1] = (acpiPhysicalBase + 0x400000) | ptLargePage | ptPresent;

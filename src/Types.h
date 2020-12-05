@@ -461,7 +461,7 @@ typedef struct IsrTableEntry {
 typedef struct AddressSpace {
     PageTableEntry root;
     size_t tlbShootdownPageCount;
-    uintptr_t tlbShootdownPages[TASK_MAX_TLB_SHOOTDOWN_PAGES];
+    VirtualAddress tlbShootdownPages[TASK_MAX_TLB_SHOOTDOWN_PAGES];
     LinkedList_Node shootdownFrameListHead;
 } AddressSpace;
 

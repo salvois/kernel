@@ -25,10 +25,6 @@ typedef struct DescriptorTableLocation {
     uint32_t base;
 } DescriptorTableLocation;
 
-/** Global table of Cpu structures in use, each representing a logical processor. */
-Cpu *Cpu_cpus[MAX_CPU_COUNT];
-/** Global count of Cpu structures in use. */
-size_t Cpu_cpuCount;
 /** The one Interrupt Descriptor Table. */
 static CpuDescriptor Cpu_idt[256];
 
@@ -123,7 +119,7 @@ __attribute__((section(".boot"))) void Cpu_loadCpuTables(Cpu *cpu) {
 
 /** Maps the Local APIC base address to virtual memory. */
 __attribute__((section(".boot"))) static void Cpu_mapLocalApic(const MpConfigHeader *mpConfigHeader) {
-    PageTableEntry *pd = phys2virt(physicalAddress((uintptr_t) &Boot_kernelPageDirectoryPhysicalAddress));
+    PageTableEntry *pd = (PageTableEntry *) &Boot_kernelPageDirectory;
     FrameNumber ptFrameNumber = PhysicalMemory_allocate(NULL, permamapMemoryRegion);
     if (ptFrameNumber.v == 0) panic("Unable to allocate memory to map the Local APIC.");
     PageTableEntry *pt = frame2virt(ptFrameNumber);

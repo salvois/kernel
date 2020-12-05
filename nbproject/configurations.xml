@@ -78,6 +78,7 @@
                    projectFiles="false"
                    kind="TEST_LOGICAL_FOLDER">
       <logicalFolder name="f2" displayName="UtilTest" projectFiles="true" kind="TEST">
+        <itemPath>test/AddressSpaceTest.c</itemPath>
         <itemPath>test/CpuNodeTest.c</itemPath>
         <itemPath>test/CpuTest.c</itemPath>
         <itemPath>test/LibcTest.c</itemPath>
@@ -97,6 +98,7 @@
                    projectFiles="false"
                    kind="IMPORTANT_FILES_FOLDER">
       <itemPath>Makefile</itemPath>
+      <itemPath>link.ld</itemPath>
     </logicalFolder>
     <itemPath>doc/Design.asciidoc</itemPath>
     <itemPath>README.asciidoc</itemPath>
@@ -253,6 +255,8 @@
       <item path="src/hardware/hardware.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/hardware/ia32.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="test/AddressSpaceTest.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="test/CpuNodeTest.c" ex="false" tool="0" flavor2="0">
       </item>
@@ -438,6 +442,8 @@
       <item path="src/hardware/hardware.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/hardware/ia32.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="test/AddressSpaceTest.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="test/CpuNodeTest.c" ex="false" tool="0" flavor2="0">
       </item>

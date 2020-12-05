@@ -134,8 +134,8 @@ static inline void AddressSpace_invalidateTlb() {
 }
 
 /** Invalidates a single TLB entry. */
-static inline void AddressSpace_invalidateTlbAddress(uintptr_t a) {
-    asm volatile("invlpg %0" : : "m" ((void *) a) : "memory");
+static inline void AddressSpace_invalidateTlbAddress(VirtualAddress a) {
+    asm volatile("invlpg %0" : : "m" ((void *) a.v) : "memory");
 }
 
 #endif

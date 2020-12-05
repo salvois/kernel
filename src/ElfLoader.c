@@ -374,12 +374,12 @@ void ElfLoader_fromExeMultibootModule(Task *task, PhysicalAddress begin, Physica
                 i, phdr->p_offset, phdr->p_vaddr, phdr->p_paddr, phdr->p_filesz, phdr->p_memsz, phdr->p_flags, phdr->p_align);
         for (size_t j = 0; j < phdr->p_memsz; j += PAGE_SIZE) {
             if (j < phdr->p_filesz) {
-                AddressSpace_map(task, phdr->p_vaddr + j, floorToFrame(addToPhysicalAddress(begin, + phdr->p_offset + j)));
+                AddressSpace_map(task, makeVirtualAddress(phdr->p_vaddr + j), floorToFrame(addToPhysicalAddress(begin, + phdr->p_offset + j)));
                 if (j + PAGE_SIZE >= phdr->p_filesz) {
                     //memzero(phdr->p_vaddr + j);
                 }
             } else {
-                AddressSpace_mapFromNewFrame(task, phdr->p_vaddr + j, otherMemoryRegion);
+                AddressSpace_mapFromNewFrame(task, makeVirtualAddress(phdr->p_vaddr + j), otherMemoryRegion);
             }
         }
     }
@@ -387,7 +387,7 @@ void ElfLoader_fromExeMultibootModule(Task *task, PhysicalAddress begin, Physica
     uintptr_t stackTop = HIGH_HALF_BEGIN - ((xorshift64star(&seed) & 0x7FF) << PAGE_SHIFT); // 8 MiB randomization
     // TODO: dynamically grow stack on page fault
     for (size_t i = 1048576; i > 0; i -= PAGE_SIZE) {
-        AddressSpace_mapFromNewFrame(task, stackTop - i, otherMemoryRegion);
+        AddressSpace_mapFromNewFrame(task, makeVirtualAddress(stackTop - i), otherMemoryRegion);
     }
     Log_printf("  Stack allocated and mapped at [%p..%p).\n", stackTop - 1048576, stackTop);
     Thread *thread = SlabAllocator_allocate(&threadAllocator);

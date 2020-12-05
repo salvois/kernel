@@ -26,21 +26,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 /** Number of nice levels (to weight threads with same priority). */
 #define NICE_LEVELS 40
 
-/** Flags of a page table entry (any level). */
-enum PageTableFlags {
-    ptPresent = 1 << 0,
-    ptWriteable = 1 << 1,
-    ptUser = 1 << 2,
-    ptWriteThrough = 1 << 3,
-    ptCacheDisable = 1 << 4,
-    ptAccessed = 1 << 5,
-    ptDirty = 1 << 6,
-    ptLargePage = 1 << 7,
-    ptPat = 1 << 7,
-    ptGlobal = 1 << 8,
-    ptIgnored = 7 << 9
-};
-
 /** CPU Model Specific Registers. */
 enum Msr {
     msrSysenterCs = 0x174,
@@ -89,7 +74,6 @@ extern CpuNode   CpuNode_theInstance;
 extern uint32_t  Cpu_cpuCount;
 extern Cpu      *Cpu_cpus[MAX_CPU_COUNT];
 extern unsigned  Cpu_timesliceLengths[NICE_LEVELS];
-extern uint8_t   Boot_kernelPageDirectoryPhysicalAddress;
 
 __attribute__((section(".boot"))) void Cpu_loadCpuTables(Cpu *cpu);
 __attribute__((section(".boot"))) void Cpu_setupIdt();
