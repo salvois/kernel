@@ -23,6 +23,19 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 /** Frequency in Hz of the ACPI Power Management timer. */
 #define ACPI_PMTIMER_FREQUENCY 3579545
 
+/** ACPI table for the Root System Descriptor Pointer. */
+typedef struct AcpiRootSystemDescPointer {
+    char signature[8]; // "RSD PTR "
+    uint8_t checksum;
+    char oemId[6];
+    uint8_t revision;
+    uint32_t rsdtPhysicalAddress;
+    uint32_t length;
+    uint64_t xsdtPhysicalAddress;
+    uint8_t extendedChecksum;
+    uint8_t reserved[3];
+} __attribute__((packed)) AcpiRootSystemDescPointer;
+
 typedef struct AcpiDescriptionHeader {
     uint32_t signature;
     uint32_t length;
@@ -42,6 +55,12 @@ typedef struct AcpiAddress {
     uint8_t reserved;
     uint64_t address;
 } __attribute__((packed)) AcpiAddress;
+
+/** ACPI table for the Root System Descriptor Table. */
+typedef struct AcpiRootSystemDescTable {
+    AcpiDescriptionHeader header; // signature='RSDT'
+    uint32_t entries[]; // physical address of table entries, count derived from header.length
+} __attribute__((packed)) AcpiRootSystemDescTable;
 
 typedef struct AcpiFadt {
     AcpiDescriptionHeader header; // signature='FACP'
@@ -89,7 +108,15 @@ typedef struct AcpiFadt {
     // Extended fields omitted
 } __attribute__((packed)) AcpiFadt;
 
-extern AcpiFadt Acpi_fadt;
+/** ACPI table for the High Performance Event Timer (HPET). */
+typedef struct AcpiHpet {
+    AcpiDescriptionHeader header; // signature='HPET'
+    uint32_t eventTimerBlockId;
+    AcpiAddress baseAddress; // lower 32 bits
+    uint8_t hpetNumber;
+    uint16_t minimumClockTick;
+    uint8_t pageProtection;
+} __attribute__((packed)) AcpiHpet;
 
 typedef struct AcpiPmTimer {
     uint64_t timerMax; // 0x01000000 if timer is 24-bit, 0x100000000 if timer is 32-bit
@@ -98,13 +125,22 @@ typedef struct AcpiPmTimer {
     uint32_t prevCount;
 } AcpiPmTimer;
 
-__attribute__((section(".boot"))) void Acpi_findConfig();
+#define ACPI_RSDT_SIGNATURE 0x54445352
+#define ACPI_FADT_SIGNATURE 0x50434146 // yes, this is actually FACP
+#define ACPI_HPET_SIGNATURE 0x54455048
+
+extern AcpiFadt Acpi_fadt;
+extern AcpiHpet Acpi_hpet;
 
 /** Reads the raw value of the ACPI Power Management timer. */
 static inline uint32_t Acpi_readPmTimer() {
     return inpd(Acpi_fadt.pmTmrBlk);
 }
 
+const AcpiRootSystemDescPointer *Acpi_doSearchRootSystemDescriptorPointer(PhysicalAddress begin, PhysicalAddress end);
+void *Acpi_mapToTemporaryArea(PhysicalAddress address, int tempAreaIndex);
+void Acpi_doFindConfig(PhysicalAddress rsdtPhysicalAddress, void *(*mapToTemporaryArea)(PhysicalAddress address, int tempAreaIndex));
+void Acpi_findConfig();
 void AcpiPmTimer_initialize();
 unsigned AcpiPmTimer_busyWait(unsigned ticks);
 

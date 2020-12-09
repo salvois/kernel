@@ -21,6 +21,17 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "Types.h"
 #include "PhysicalMemory.h"
 
+/*
+ * On 32-bit higher half mode, the virtual address space is mapped as following in the kernel:
+ * [0xC0000000, 0xF8000000) maps all physical memory from [0x00000000, 0x3800000) 896 MiB
+ * [0xF8000000, 0xF8800000) temporary mapping area #1, 8 MiB
+ * [0xF8800000, 0xF9000000) temporary mapping area #2, 8 MiB
+ * ...
+ * [0xFE000000, 0xFE800000) temporary mapping area #13, 8 MiB
+ * [0xFEC00000, 0xFEC01000) I/O APIC
+ * [0xFEE00000, 0xFEE01000) Local APIC
+ */
+
 typedef struct PageTable {
     PageTableEntry entries[PAGE_SIZE / sizeof(PageTableEntry)];
 } PageTable;
@@ -41,6 +52,10 @@ enum PageTableFlags {
     ptGlobal = 1 << 8,
     ptIgnored = 7 << 9
 };
+
+static inline VirtualAddress AddressSpace_getTemporaryMappingArea(int index) {
+    return makeVirtualAddress(0xF8000000 + 0x800000 * index);
+}
 
 int  AddressSpace_initialize(Task *task);
 int  AddressSpace_map(Task *task, VirtualAddress virtualAddress, FrameNumber frameNumber);

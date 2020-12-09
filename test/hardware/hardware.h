@@ -49,6 +49,10 @@ static inline void *Cpu_getFaultingAddress() {
     return (void *)0;
 }
 
+static inline void Cpu_relax() {
+    asm volatile("pause" : : : "memory");
+}
+
 static inline uint32_t Cpu_readFs() {
     return theFakeHardware.fsRegister;
 }

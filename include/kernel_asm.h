@@ -21,7 +21,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 /** Size in bits of a machine word (32 or 64). */
 #define WORD_SIZE 32    
 
-#define CPU_LAPIC_VIRTUAL_ADDRESS 0xFEE00000 /* The page just before page tables */
+#define CPU_LAPIC_VIRTUAL_ADDRESS 0xFEE00000
 
 // These constants represents the enum Selector for use in assembly
 #define CPU_FLAT_KERNEL_DS (2 << 3)

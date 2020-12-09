@@ -28,8 +28,10 @@ extern void PhysicalMemoryTest_run();
 extern void MultibootTest_run();
 extern void SlabAllocatorTest_run();
 extern void AddressSpaceTest_run();
+extern void AcpiTest_run();
 
 int Log_printf(const char *format, ...) { return 0; }
+int Video_printf(const char *format, ...) { return 0; }
 void panic(const char *format, ...) { }
 
 int main() {
@@ -42,5 +44,6 @@ int main() {
     RUN_SUITE(MultibootTest_run);
     RUN_SUITE(SlabAllocatorTest_run);
     RUN_SUITE(AddressSpaceTest_run);
+    RUN_SUITE(AcpiTest_run);
     return exitCode;
 }

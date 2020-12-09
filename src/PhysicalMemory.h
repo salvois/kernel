@@ -70,6 +70,7 @@ extern size_t PhysicalMemory_totalMemoryFrames;
 extern PhysicalMemoryRegion PhysicalMemory_regions[physicalMemoryRegionCount];
 
 static inline VirtualAddress makeVirtualAddress(uintptr_t v) { return (VirtualAddress) { v }; }
+static inline VirtualAddress addToVirtualAddress(VirtualAddress va, ptrdiff_t d) { return (VirtualAddress) { va.v + d }; }
 static inline PhysicalAddress physicalAddress(uintptr_t v) { return (PhysicalAddress) { v }; }
 static inline PhysicalAddress addToPhysicalAddress(PhysicalAddress pa, ptrdiff_t d) { return (PhysicalAddress) { pa.v + d }; }
 static inline FrameNumber frameNumber(uintptr_t v) { return (FrameNumber) { v }; }

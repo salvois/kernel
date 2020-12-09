@@ -78,6 +78,7 @@
                    projectFiles="false"
                    kind="TEST_LOGICAL_FOLDER">
       <logicalFolder name="f2" displayName="UtilTest" projectFiles="true" kind="TEST">
+        <itemPath>test/AcpiTest.c</itemPath>
         <itemPath>test/AddressSpaceTest.c</itemPath>
         <itemPath>test/CpuNodeTest.c</itemPath>
         <itemPath>test/CpuTest.c</itemPath>
@@ -255,6 +256,8 @@
       <item path="src/hardware/hardware.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/hardware/ia32.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="test/AcpiTest.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="test/AddressSpaceTest.c" ex="false" tool="0" flavor2="0">
       </item>
@@ -442,6 +445,8 @@
       <item path="src/hardware/hardware.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/hardware/ia32.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="test/AcpiTest.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="test/AddressSpaceTest.c" ex="false" tool="0" flavor2="0">
       </item>
