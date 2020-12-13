@@ -13,6 +13,7 @@ CSOURCES = \
   src/Libc.c \
   src/LinkedList.c \
   src/Multiboot.c \
+  src/MultiProcessorSpecification.c \
   src/PhysicalMemory.c \
   src/Pic8259.c \
   src/PortE9Log.c \
@@ -33,6 +34,7 @@ TESTS_CSOURCES = \
   src/Libc.c \
   src/LinkedList.c \
   src/Multiboot.c \
+  src/MultiProcessorSpecification.c \
   src/PriorityQueue.c \
   src/PhysicalMemory.c \
   src/SlabAllocator.c \
@@ -42,6 +44,7 @@ TESTS_CSOURCES = \
   test/LibcTest.c \
   test/LinkedListTest.c \
   test/MultibootTest.c \
+  test/MultiProcessorSpecificationTest.c \
   test/CpuNodeTest.c \
   test/CpuTest.c \
   test/PriorityQueueTest.c \

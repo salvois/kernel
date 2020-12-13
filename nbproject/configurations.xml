@@ -59,6 +59,7 @@
       <itemPath>src/LapicTimer.c</itemPath>
       <itemPath>src/Libc.c</itemPath>
       <itemPath>src/LinkedList.c</itemPath>
+      <itemPath>src/MultiProcessorSpecification.c</itemPath>
       <itemPath>src/Multiboot.c</itemPath>
       <itemPath>src/PhysicalMemory.c</itemPath>
       <itemPath>src/Pic8259.c</itemPath>
@@ -84,6 +85,7 @@
         <itemPath>test/CpuTest.c</itemPath>
         <itemPath>test/LibcTest.c</itemPath>
         <itemPath>test/LinkedListTest.c</itemPath>
+        <itemPath>test/MultiProcessorSpecificationTest.c</itemPath>
         <itemPath>test/MultibootTest.c</itemPath>
         <itemPath>test/PhysicalMemoryTest.c</itemPath>
         <itemPath>test/PriorityQueueTest.c</itemPath>
@@ -205,6 +207,8 @@
       </item>
       <item path="src/LinkedList.h" ex="false" tool="3" flavor2="0">
       </item>
+      <item path="src/MultiProcessorSpecification.c" ex="false" tool="0" flavor2="0">
+      </item>
       <item path="src/MultiProcessorSpecification.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/Multiboot.c" ex="false" tool="0" flavor2="0">
@@ -268,6 +272,11 @@
       <item path="test/LibcTest.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="test/LinkedListTest.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="test/MultiProcessorSpecificationTest.c"
+            ex="false"
+            tool="0"
+            flavor2="0">
       </item>
       <item path="test/MultibootTest.c" ex="false" tool="0" flavor2="0">
       </item>
@@ -394,6 +403,8 @@
       </item>
       <item path="src/LinkedList.h" ex="false" tool="3" flavor2="0">
       </item>
+      <item path="src/MultiProcessorSpecification.c" ex="false" tool="0" flavor2="0">
+      </item>
       <item path="src/MultiProcessorSpecification.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="src/Multiboot.c" ex="false" tool="0" flavor2="0">
@@ -457,6 +468,11 @@
       <item path="test/LibcTest.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="test/LinkedListTest.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="test/MultiProcessorSpecificationTest.c"
+            ex="false"
+            tool="0"
+            flavor2="0">
       </item>
       <item path="test/MultibootTest.c" ex="false" tool="0" flavor2="0">
       </item>

@@ -29,6 +29,7 @@ extern void MultibootTest_run();
 extern void SlabAllocatorTest_run();
 extern void AddressSpaceTest_run();
 extern void AcpiTest_run();
+extern void MultiProcessorSpecificationTest_run();
 
 int Log_printf(const char *format, ...) { return 0; }
 int Video_printf(const char *format, ...) { return 0; }
@@ -45,5 +46,6 @@ int main() {
     RUN_SUITE(SlabAllocatorTest_run);
     RUN_SUITE(AddressSpaceTest_run);
     RUN_SUITE(AcpiTest_run);
+    RUN_SUITE(MultiProcessorSpecificationTest_run);
     return exitCode;
 }

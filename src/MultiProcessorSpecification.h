@@ -83,4 +83,10 @@ typedef struct MpConfigIoapic { // extends MpConfigEntry
     uint32_t ioapicPhysicalAddress;
 } MpConfigIoapic;
 
+#define MPFLOATINGPOINTER_SIGNATURE 0x5F504D5F // "_MP_"
+
+const MpFloatingPointer *MultiProcessorSpecification_searchMpFloatingPointer(PhysicalAddress begin, PhysicalAddress end);
+const MpConfigHeader *MultiProcessorSpecification_searchFindMpConfig();
+void MultiProcessorSpecification_scanProcessors(const MpConfigHeader *mpConfigHeader, void *closure, void (*callback)(void *closure, int lapicId));
+
 #endif

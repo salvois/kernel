@@ -76,7 +76,7 @@ extern Cpu      *Cpu_cpus[MAX_CPU_COUNT];
 extern unsigned  Cpu_timesliceLengths[NICE_LEVELS];
 
 __attribute__((section(".boot"))) void Cpu_loadCpuTables(Cpu *cpu);
-__attribute__((section(".boot"))) void Cpu_setupIdt();
+__attribute__((section(".boot"))) void Cpu_setupInterruptDescriptorTable();
 __attribute__((section(".boot"))) Cpu *Cpu_initializeCpuStructs(const MpConfigHeader *mpConfigHeader);
 __attribute__((section(".boot"))) void Cpu_startOtherCpus();
 __attribute__((fastcall, noreturn)) int Cpu_idleThreadFunction(void *); // from Cpu_asm.S
