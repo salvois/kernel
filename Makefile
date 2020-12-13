@@ -29,6 +29,7 @@ CSOURCES = \
 TESTS_CSOURCES = \
   src/Acpi.c \
   src/AddressSpace.c \
+  src/Boot_Cpu.c \
   src/Cpu.c \
   src/CpuNode.c \
   src/Libc.c \
@@ -41,6 +42,7 @@ TESTS_CSOURCES = \
   test/hardware/hardware.c \
   test/AcpiTest.c \
   test/AddressSpaceTest.c \
+  test/BootCpuTest.c \
   test/LibcTest.c \
   test/LinkedListTest.c \
   test/MultibootTest.c \

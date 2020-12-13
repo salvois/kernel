@@ -43,7 +43,7 @@ int Thread_initialize(Task *task, Thread *thread, unsigned priority, unsigned ni
     thread->regs->vector = THREADREGISTERS_VECTOR_CUSTOMDSES;
     thread->regs->cs = flatUserCS;
     thread->regs->eip = entry;
-    thread->regs->eflags = 1 << 9; // interrupts enabled
+    thread->regs->eflags = CpuFlag_interruptEnable;
     thread->regs->ds = flatUserDS;
     thread->regs->es = flatUserDS;
     thread->regs->ss = flatUserDS;

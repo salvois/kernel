@@ -20,9 +20,14 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 FakeHardware theFakeHardware;
 
 PageTable Boot_kernelPageDirectory;
+uint8_t Cpu_firstInterruptTrampoline;
+uint8_t Cpu_secondInterruptTrampoline;
+uint8_t Cpu_spuriousInterruptHandler;
+uint8_t Cpu_sysenter;
 
 uint32_t Cpu_readLocalApic(size_t offset) {
     switch (offset) {
+        case lapicIdRegister: return theFakeHardware.lapicIdRegister;
         case lapicEoi: return theFakeHardware.lapicEoi;
         case lapicSpuriousInterrupt: return theFakeHardware.lapicSpuriousInterrupt;
         case lapicInterruptCommandLow: return theFakeHardware.lapicInterruptCommandLow;
@@ -40,6 +45,7 @@ uint32_t Cpu_readLocalApic(size_t offset) {
 
 void Cpu_writeLocalApic(size_t offset, uint32_t value) {
     switch (offset) {
+        case lapicIdRegister: theFakeHardware.lapicIdRegister = value; break;
         case lapicEoi: theFakeHardware.lapicEoi = value; break;
         case lapicSpuriousInterrupt: theFakeHardware.lapicSpuriousInterrupt = value; break;
         case lapicInterruptCommandLow: theFakeHardware.lapicInterruptCommandLow = value; break;
@@ -53,4 +59,28 @@ void Cpu_writeLocalApic(size_t offset, uint32_t value) {
         case lapicTimerDivider: theFakeHardware.lapicTimerDivider = value; break;
         default: assert(false);
     }
+}
+
+uint64_t Cpu_readMsr(uint32_t msr) {
+    switch (msr) {
+        case msrSysenterCs: return theFakeHardware.msrSysenterCs;
+        case msrSysenterEsp: return theFakeHardware.msrSysenterEsp;
+        case msrSysenterEip: return theFakeHardware.msrSysenterEip;
+        default: assert(false); return 0xDEADBEEF;
+    }
+}
+
+void Cpu_writeMsr(uint32_t msr, uint64_t value) {
+    switch (msr) {
+        case msrSysenterCs: theFakeHardware.msrSysenterCs = value; break;
+        case msrSysenterEsp: theFakeHardware.msrSysenterEsp = value; break;
+        case msrSysenterEip: theFakeHardware.msrSysenterEip = value; break;
+        default: assert(false);
+    }
+}
+
+__attribute__((fastcall, noreturn)) 
+int Cpu_idleThreadFunction(void *param) {
+    assert(false);
+    while (true) { }
 }

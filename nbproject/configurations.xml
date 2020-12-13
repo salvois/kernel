@@ -81,6 +81,7 @@
       <logicalFolder name="f2" displayName="UtilTest" projectFiles="true" kind="TEST">
         <itemPath>test/AcpiTest.c</itemPath>
         <itemPath>test/AddressSpaceTest.c</itemPath>
+        <itemPath>test/BootCpuTest.c</itemPath>
         <itemPath>test/CpuNodeTest.c</itemPath>
         <itemPath>test/CpuTest.c</itemPath>
         <itemPath>test/LibcTest.c</itemPath>
@@ -264,6 +265,8 @@
       <item path="test/AcpiTest.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="test/AddressSpaceTest.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="test/BootCpuTest.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="test/CpuNodeTest.c" ex="false" tool="0" flavor2="0">
       </item>
@@ -460,6 +463,8 @@
       <item path="test/AcpiTest.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="test/AddressSpaceTest.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="test/BootCpuTest.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="test/CpuNodeTest.c" ex="false" tool="0" flavor2="0">
       </item>

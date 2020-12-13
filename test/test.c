@@ -16,6 +16,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 #include "test.h"
+#include "assert.h"
 
 int exitCode = 0;
 
@@ -30,10 +31,11 @@ extern void SlabAllocatorTest_run();
 extern void AddressSpaceTest_run();
 extern void AcpiTest_run();
 extern void MultiProcessorSpecificationTest_run();
+extern void BootCpuTest_run();
 
 int Log_printf(const char *format, ...) { return 0; }
 int Video_printf(const char *format, ...) { return 0; }
-void panic(const char *format, ...) { }
+void panic(const char *format, ...) { assert(0); }
 
 int main() {
     RUN_SUITE(LibcTest_run);
@@ -47,5 +49,6 @@ int main() {
     RUN_SUITE(AddressSpaceTest_run);
     RUN_SUITE(AcpiTest_run);
     RUN_SUITE(MultiProcessorSpecificationTest_run);
+    RUN_SUITE(BootCpuTest_run);
     return exitCode;
 }

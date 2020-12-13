@@ -290,7 +290,7 @@ struct Thread {
     bool kernelThread;
     uint8_t *stack; // for kernel-mode threads
     ThreadRegisters *regs; // for user-mode threads points to regsBuf, for kernel-mode threads points to bottom of the stack
-    ThreadRegisters regsBuf; // for user-mode threads
+    ThreadRegisters regsBuf; // for user-mode threads and the idle thread of each CPU
     Endpoint endpoint;
     Channel channel;
     uint8_t padding[12]; // sizeof(Thread) must be a multiple of 16 bytes
@@ -437,7 +437,6 @@ struct Cpu {
     Tsc           tsc; // 24 bytes
     PriorityQueue readyQueue; // per-CPU ready threads, 24 bytes
     Thread        idleThread; // offset 268, 320 bytes
-    uint8_t       idleThreadStack[CPU_IDLE_THREAD_STACK_SIZE];
     uint8_t       stack[CPU_STACK_SIZE];
 };
 

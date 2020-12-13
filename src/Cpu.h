@@ -26,6 +26,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 /** Number of nice levels (to weight threads with same priority). */
 #define NICE_LEVELS 40
 
+#define CPU_LAPIC_DEFAULT_PHYSICAL_ADDRESS physicalAddress(0xFEE00000)
+
+
 /** CPU Model Specific Registers. */
 enum Msr {
     msrSysenterCs = 0x174,
@@ -43,6 +46,7 @@ enum IrqVector {
 
 /** Offsets for Local APIC registers. */
 enum Lapic {
+    lapicIdRegister = 0x20,
     lapicEoi = 0xB0,
     lapicSpuriousInterrupt = 0xF0,
     lapicInterruptCommandLow = 0x300, // Interrupt Command Register, low word
@@ -56,6 +60,10 @@ enum Lapic {
     lapicTimerDivider = 0x3E0
 };
 
+enum CpuFlag {
+    CpuFlag_interruptEnable = 1 << 9
+};
+
 /**
  * Dummy union to check that offsets and size of the Cpu struct are consistent with constants used in assembly.
  * Courtesy of http://www.embedded.com/design/prototyping-and-development/4024941/Learn-a-new-trick-with-the-offsetof--macro
@@ -64,7 +72,6 @@ union CpuChecker {
     char wrongLapicIdOffset[offsetof(Cpu, lapicId) == CPU_LAPICID_OFFSET];
     char wrongThisCpuOffset[offsetof(Cpu, thisCpu) == CPU_THISCPU_OFFSET];
     char wrongCurrentThreadOffset[offsetof(Cpu, currentThread) == CPU_CURRENTTHREAD_OFFSET];
-    char wrongIdleThreadStackOffset[offsetof(Cpu, idleThreadStack) == CPU_IDLE_THREAD_STACK_OFFSET];
     char wrongStackOffset[offsetof(Cpu, stack) == CPU_STACK_OFFSET];
     char wrongCpuSize[sizeof(Cpu) == CPU_STRUCT_SIZE];
     char cpuNotFittingInPage[sizeof(Cpu) <= PAGE_SIZE];

@@ -20,6 +20,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 typedef struct FakeHardware {
     Cpu *currentCpu;
+    uint32_t lapicIdRegister;
     uint32_t lapicEoi;
     uint32_t lapicSpuriousInterrupt;
     uint32_t lapicInterruptCommandLow;
@@ -38,12 +39,17 @@ typedef struct FakeHardware {
     uint32_t gsRegister;
     uint32_t ldtRegister;
     uint64_t tscRegister;
+    uint64_t msrSysenterCs;
+    uint64_t msrSysenterEsp;
+    uint64_t msrSysenterEip;
 } FakeHardware;
 
 extern FakeHardware theFakeHardware;
 
 uint32_t Cpu_readLocalApic(size_t offset);
 void Cpu_writeLocalApic(size_t offset, uint32_t value);
+uint64_t Cpu_readMsr(uint32_t msr);
+void Cpu_writeMsr(uint32_t msr, uint64_t value);
 
 static inline void *Cpu_getFaultingAddress() {
     return (void *)0;
@@ -91,6 +97,13 @@ static inline void AddressSpace_invalidateTlbAddress(VirtualAddress a) {
 
 static inline uint64_t Tsc_read() {
     return theFakeHardware.tscRegister;
+}
+
+static inline void Cpu_cpuid(uint32_t level, uint32_t *a, uint32_t *b, uint32_t *c, uint32_t *d) {
+    *a = 0x000806EB;
+    *b = 0x00020800;
+    *c = 0x56DA2203;
+    *d = 0x178BFBFF;
 }
 
 #endif

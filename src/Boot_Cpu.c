@@ -54,19 +54,14 @@ static void Cpu_setupIdleThread(Cpu *cpu) {
     cpu->idleThread.threadFunction = Cpu_idleThreadFunction;
     cpu->idleThread.cpu = cpu;
     cpu->idleThread.priority = THREAD_IDLE_PRIORITY;
-    cpu->idleThread.stack = (uint8_t *) &cpu->idleThread.regsBuf;
-    cpu->idleThread.regs = (ThreadRegisters *) (cpu->idleThreadStack + CPU_IDLE_THREAD_STACK_SIZE - offsetof(ThreadRegisters, esp)); // esp and ss are not on the stack
-    cpu->idleThread.regs->vector = THREADREGISTERS_VECTOR_CUSTOMDSES;
-    cpu->idleThread.regs->cs = flatKernelCS;
-    cpu->idleThread.regs->eip = (uint32_t) cpu->idleThread.threadFunction;
-    cpu->idleThread.regs->eflags = 1 << 9; // interrupts enabled
-    cpu->idleThread.regs->ecx = (uint32_t) cpu->idleThread.threadFunctionParam;
-    cpu->idleThread.regs->ds = flatUserDS;
-    cpu->idleThread.regs->es = flatUserDS;
-    cpu->idleThread.regs->gs = kernelGS;
-    cpu->idleThread.regs->esp = (uint32_t) cpu->idleThread.regs - offsetof(ThreadRegisters, es); // Cpu_returnToUserMode starts by popping es
-    cpu->idleThread.state = threadStateRunning;
     cpu->idleThread.queueNode.key = THREAD_IDLE_PRIORITY;
+    cpu->idleThread.regs = &cpu->idleThread.regsBuf;
+    cpu->idleThread.kernelThread = true;
+    cpu->idleThread.regs->gs = kernelGS;
+    cpu->idleThread.regs->eip = (uint32_t) cpu->idleThread.threadFunction;
+    cpu->idleThread.regs->cs = flatKernelCS;
+    cpu->idleThread.regs->eflags = CpuFlag_interruptEnable;
+    cpu->idleThread.state = threadStateRunning;
 }
 
 __attribute__((section(".boot")))
@@ -82,7 +77,7 @@ static void Cpu_initialize(Cpu *cpu, size_t index, size_t lapicId) {
     cpu->currentThread = &cpu->idleThread;
     cpu->nextThread = cpu->currentThread;
     cpu->tss.ss0 = flatKernelDS;
-    cpu->tss.esp0 = cpu->idleThread.regs->esp;
+    cpu->tss.esp0 = (uint32_t) cpu->idleThread.regs + offsetof(ThreadRegisters, edi); // Cpu_returnToUserMode starts by popping EDI
     cpu->rescheduleNeeded = true;
     PriorityQueue_init(&cpu->readyQueue);
 }
@@ -130,7 +125,7 @@ static void Cpu_mapLocalApic(const MpConfigHeader *mpConfigHeader) {
     PageTable *pt = frame2virt(ptFrameNumber);
     pd->entries[CPU_LAPIC_VIRTUAL_ADDRESS >> 22] = (ptFrameNumber.v << PAGE_SHIFT) | ptPresent | ptWriteable;
     pt->entries[(CPU_LAPIC_VIRTUAL_ADDRESS >> 12) & 0x3FF] =
-            ((mpConfigHeader != NULL) ? mpConfigHeader->lapicPhysicalAddress : 0xFEE00000) | ptPresent | ptWriteable | ptGlobal | ptCacheDisable;
+            ((mpConfigHeader != NULL) ? mpConfigHeader->lapicPhysicalAddress : CPU_LAPIC_DEFAULT_PHYSICAL_ADDRESS.v) | ptPresent | ptWriteable | ptGlobal | ptCacheDisable;
 }
 
 typedef struct CpuInitializationClosure {
@@ -160,8 +155,10 @@ static void Cpu_allocateAndInitialize(void *closure, int lapicId) {
  */
 __attribute__((section(".boot")))
 Cpu *Cpu_initializeCpuStructs(const MpConfigHeader *mpConfigHeader) {
+    memzero(Cpu_cpus, sizeof(Cpu_cpus));
+    Cpu_cpuCount = 0;
     Cpu_mapLocalApic(mpConfigHeader);
-    CpuInitializationClosure closure = { .currentLapicId = Cpu_readLocalApic(0x20) >> 24, .bootCpu = NULL };
+    CpuInitializationClosure closure = { .currentLapicId = Cpu_readLocalApic(lapicIdRegister) >> 24, .bootCpu = NULL };
     Log_printf("The LAPIC ID of the current CPU is 0x%02X.\n", closure.currentLapicId);
     if (mpConfigHeader != NULL)
         MultiProcessorSpecification_scanProcessors(mpConfigHeader, &closure, Cpu_allocateAndInitialize);
