@@ -19,7 +19,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define CPU_H_INCLUDED
 
 #include "Types.h"
-#include "MultiProcessorSpecification.h"
 
 /** The absolute maximum number of CPUs supported. */
 #define MAX_CPU_COUNT 1024
@@ -77,15 +76,11 @@ union CpuChecker {
     char cpuNotFittingInPage[sizeof(Cpu) <= PAGE_SIZE];
 }; 
 
-extern CpuNode   CpuNode_theInstance;
-extern uint32_t  Cpu_cpuCount;
-extern Cpu      *Cpu_cpus[MAX_CPU_COUNT];
-extern unsigned  Cpu_timesliceLengths[NICE_LEVELS];
+extern uint32_t Cpu_cpuCount;
+extern Cpu *Cpu_cpus[MAX_CPU_COUNT];
+extern CpuDescriptor Cpu_idt[256];
+extern unsigned Cpu_timesliceLengths[NICE_LEVELS];
 
-__attribute__((section(".boot"))) void Cpu_loadCpuTables(Cpu *cpu);
-__attribute__((section(".boot"))) void Cpu_setupInterruptDescriptorTable();
-__attribute__((section(".boot"))) Cpu *Cpu_initializeCpuStructs(const MpConfigHeader *mpConfigHeader);
-__attribute__((section(".boot"))) void Cpu_startOtherCpus();
 __attribute__((fastcall, noreturn)) int Cpu_idleThreadFunction(void *); // from Cpu_asm.S
 __attribute__((fastcall)) void Cpu_unhandledException(Cpu *cpu, void *param);
 void Cpu_returnToUserMode(uintptr_t stackPointer); // from Cpu_asm.S
@@ -99,10 +94,5 @@ Thread *Cpu_findNextThreadAndUpdateReadyQueue(Cpu *cpu, bool timesliced);
 void Cpu_setTimesliceTimer(Cpu *cpu);
 void Cpu_schedule(Cpu *cpu);
 void Cpu_exitKernel(Cpu *cpu);
-
-Cpu *CpuNode_findTargetCpu(const CpuNode *node, Cpu *lastCpu);
-void CpuNode_addRunnableThread(CpuNode *node, Thread *thread);
-
-void Pic8259_initialize(uint8_t masterVector, uint8_t slaveVector);
 
 #endif

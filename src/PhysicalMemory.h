@@ -19,7 +19,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define PHYSICALMEMORY_H_INCLUDED
 
 #include "Types.h"
-#include "Multiboot.h"
 
 /** log2 of the size in bytes of a memory page or page frame. */
 #define PAGE_SHIFT 12
@@ -68,6 +67,7 @@ extern Frame *PhysicalMemory_frameDescriptors;
 extern FrameNumber PhysicalMemory_firstFrame;
 extern size_t PhysicalMemory_totalMemoryFrames;
 extern PhysicalMemoryRegion PhysicalMemory_regions[physicalMemoryRegionCount];
+extern Task PhysicalMemory_freeFramesDummyOwner;
 
 static inline VirtualAddress makeVirtualAddress(uintptr_t v) { return (VirtualAddress) { v }; }
 static inline VirtualAddress addToVirtualAddress(VirtualAddress va, ptrdiff_t d) { return (VirtualAddress) { va.v + d }; }
@@ -123,21 +123,8 @@ static inline FrameNumber virt2frame(void *virt) {
     return frameNumber(virt2phys(virt).v >> PAGE_SHIFT);
 }
 
-void PhysicalMemoryRegion_initialize(PhysicalMemoryRegion *pmr, FrameNumber begin, FrameNumber end);
-void PhysicalMemoryRegion_add(PhysicalMemoryRegion *pmr, FrameNumber begin, FrameNumber end);
-void PhysicalMemoryRegion_remove(PhysicalMemoryRegion *pmr, FrameNumber begin, FrameNumber end);
 FrameNumber PhysicalMemoryRegion_allocate(PhysicalMemoryRegion *pmr, Task *task);
 void PhysicalMemoryRegion_deallocate(PhysicalMemoryRegion *pmr, FrameNumber frameNumber);
-
-void PhysicalMemory_add(PhysicalAddress begin, PhysicalAddress end);
-void PhysicalMemory_remove(PhysicalAddress begin, PhysicalAddress end);
-void PhysicalMemory_initializeRegions();
-PhysicalAddress PhysicalMemory_findKernelEnd(const MultibootMbi *mbi, PhysicalAddress imageBegin, PhysicalAddress imageEnd);
-PhysicalAddress PhysicalMemory_findMultibootModulesEnd(const MultibootMbi *mbi);
-PhysicalAddress PhysicalMemory_findPhysicalAddressUpperBound(const MultibootMbi *mbi);
-void PhysicalMemory_addFreeMemoryBlocks(const MultibootMbi *mbi);
-void PhysicalMemory_markInitialMemoryAsAllocated(const MultibootMbi *mbi, PhysicalAddress imageBegin, PhysicalAddress kernelEnd);
-void PhysicalMemory_initializeFromMultibootV1(const MultibootMbi *mbi, PhysicalAddress imageBegin, PhysicalAddress imageEnd);
 
 FrameNumber PhysicalMemory_allocate(Task *task, PhysicalMemoryRegionType preferredRegion);
 void PhysicalMemory_deallocate(FrameNumber frameNumber);

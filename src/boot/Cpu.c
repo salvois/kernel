@@ -16,10 +16,6 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 #include "kernel.h"
-#include "PhysicalMemory.h"
-
-/** The one Interrupt Descriptor Table. */
-static CpuDescriptor Cpu_idt[256];
 
 extern uint8_t Cpu_firstInterruptTrampoline;  // from Cpu_asm.S
 extern uint8_t Cpu_secondInterruptTrampoline; // from Cpu_asm.S

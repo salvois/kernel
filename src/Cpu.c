@@ -21,6 +21,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 Cpu *Cpu_cpus[MAX_CPU_COUNT];
 /** Global count of Cpu structures in use. */
 size_t Cpu_cpuCount;
+/** The one Interrupt Descriptor Table. */
+CpuDescriptor Cpu_idt[256];
 /** Global table of interrupt service routines for each interrupt number. */
 static IsrTableEntry Cpu_isrTable[256];
 /**

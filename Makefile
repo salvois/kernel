@@ -1,19 +1,23 @@
-CFLAGS = -Wall -O3 -m32 -std=gnu99 -pedantic-errors -nostdinc -nostartfiles -nostdlib -fno-builtin -fno-asynchronous-unwind-tables -Isrc -Iinclude -Isrc/hardware
-ASMSOURCES = src/Boot_asm.S src/Cpu_asm.S
-CSOURCES = \
-  src/Boot.c \
+KERNEL_CFLAGS = -Wall -O3 -m32 -std=gnu99 -pedantic-errors -nostdinc -nostartfiles -nostdlib -fno-builtin -fno-asynchronous-unwind-tables -Isrc -Iinclude -Isrc/hardware
+KERNEL_SOURCES = \
+  src/boot/entry.S \
+  src/boot/entry.c \
+  src/boot/Acpi.c \
+  src/boot/Cpu.c \
+  src/boot/LapicTimer.c \
+  src/boot/MultiProcessorSpecification.c \
+  src/boot/Multiboot.c \
+  src/boot/PhysicalMemory.c \
+  src/boot/Pic8259.c \
   src/Acpi.c \
-  src/Boot_Cpu.c \
   src/AddressSpace.c \
+  src/Cpu.S \
   src/Cpu.c \
   src/CpuNode.c \
   src/ElfLoader.c \
   src/Formatter.c \
-  src/LapicTimer.c \
   src/Libc.c \
   src/LinkedList.c \
-  src/Multiboot.c \
-  src/MultiProcessorSpecification.c \
   src/PhysicalMemory.c \
   src/Pic8259.c \
   src/PortE9Log.c \
@@ -26,16 +30,21 @@ CSOURCES = \
   src/Tsc.c \
   src/Util.c \
   src/Video.c
-TESTS_CSOURCES = \
+
+TEST_CFLAGS = -Wall -g -m32 -std=gnu99 -pedantic-errors -nostdinc -fno-builtin -Isrc -Iinclude -Itest/hardware
+TEST_SOURCES = \
+  src/boot/Acpi.c \
+  src/boot/Cpu.c \
+  src/boot/LapicTimer.c \
+  src/boot/MultiProcessorSpecification.c \
+  src/boot/Multiboot.c \
+  src/boot/PhysicalMemory.c \
   src/Acpi.c \
   src/AddressSpace.c \
-  src/Boot_Cpu.c \
   src/Cpu.c \
   src/CpuNode.c \
   src/Libc.c \
   src/LinkedList.c \
-  src/Multiboot.c \
-  src/MultiProcessorSpecification.c \
   src/PriorityQueue.c \
   src/PhysicalMemory.c \
   src/SlabAllocator.c \
@@ -53,10 +62,9 @@ TESTS_CSOURCES = \
   test/PhysicalMemoryTest.c \
   test/SlabAllocatorTest.c \
   test/test.c
-OBJECTS = $(patsubst src/%.S, build/%.o, $(ASMSOURCES)) $(patsubst src/%.c, build/%.o, $(CSOURCES))
-DEMOS_CFLAGS = -m32 -nostdlib -fno-asynchronous-unwind-tables -no-pie -fno-pie -s -Iinclude
-DEMOS = build/EndlessLoop build/Sysenter
-TESTS_CFLAGS = -Wall -g -m32 -std=gnu99 -pedantic-errors -nostdinc -fno-builtin -Isrc -Iinclude -Itest/hardware
+
+DEMO_CFLAGS = -m32 -nostdlib -fno-asynchronous-unwind-tables -no-pie -fno-pie -s -Iinclude
+DEMO_BINARIES = build/EndlessLoop build/Sysenter
 
 .PHONY: all clean Release cleanRelease build-tests test
 
@@ -74,29 +82,22 @@ clean:
 	rm -f build/*
 	
 build-tests:
-	$(CC) $(TESTS_CFLAGS) $(TESTS_CSOURCES) -o build/test
+	$(CC) $(TEST_CFLAGS) $(TEST_SOURCES) -o build/test
 	
 test: build-tests
 	./build/test
 
-build/%.o: src/%.c include/*.h
-	$(CC) $(CFLAGS) -c $< -o $@
-
-build/%.o: src/%.S include/kernel_asm.h
-	$(CC) $(CFLAGS) -c $< -o $@
-
-build/%: demo/%.c
-	$(CC) $(DEMOS_CFLAGS) $< -o $@
-
+build/EndlessLoop: demo/EndlessLoop.c
+	$(CC) $(DEMO_CFLAGS) -O3 $< -o $@
 build/Sysenter: demo/Sysenter.c
-	$(CC) $(DEMOS_CFLAGS) -O3 $< -o $@
+	$(CC) $(DEMO_CFLAGS) -O3 $< -o $@
 
-build/kernel.bin: $(OBJECTS) $(DEMOS)
-	$(LD) -m elf_i386 -T link.ld $(OBJECTS) -o $@
+build/kernel.bin: src/* include/* $(DEMO_BINARIES)
+	$(CC) $(KERNEL_CFLAGS) $(KERNEL_SOURCES) -T link.ld -o $@
 	objdump -D $@ > build/kernel.S
 	objdump -M intel -D $@ > build/kernel.asm
 	#strip $@
 	#sudo mount ~/VirtualBox\ VMs/kerneltest/kerneltest-flat.vmdk /mnt -o loop,offset=1048576 -o umask=000
 	#cp $@ /mnt
-	#cp $(DEMOS) /mnt
+	#cp $(DEMO_BINARIES) /mnt
 	#sudo umount /mnt

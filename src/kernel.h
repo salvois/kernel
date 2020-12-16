@@ -15,24 +15,32 @@ You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
-#ifndef LAPICTIMER_H_INCLUDED
-#define LAPICTIMER_H_INCLUDED
+#ifndef KERNEL_H_INCLUDED
+#define	KERNEL_H_INCLUDED
 
 #include "Types.h"
+#include "hardware.h"
+#include "boot/Acpi.h"
+#include "boot/Cpu.h"
+#include "boot/LapicTimer.h"
+#include "boot/MultiProcessorSpecification.h"
+#include "boot/Multiboot.h"
+#include "boot/Pic8259.h"
+#include "boot/PhysicalMemory.h"
+#include "Acpi.h"
+#include "AddressSpace.h"
 #include "Cpu.h"
-
-/** Converts the specified count of ticks of the Local APIC timer to nanoseconds. */
-static inline uint32_t LapicTimer_convertTicksToNanoseconds(const LapicTimer *lt, uint32_t ticks) {
-    return mul(ticks, lt->nsPerTick) >> 20;
-}
-/** Converts the specified number of nanoseconds to count of ticks of the Local APIC timer. */
-static inline uint32_t LapicTimer_convertNanosecondsToTicks(const LapicTimer *lt, uint32_t ns) {
-    return mul(ns, lt->ticksPerNs) >> 23;
-}
-
-/** Returns the current count of the Local APIC timer. */
-static inline uint32_t LapicTimer_getCurrentCount(LapicTimer *lt) {
-    return Cpu_readLocalApic(lapicTimerCurrentCount);
-}
+#include "CpuNode.h"
+#include "ElfLoader.h"
+#include "Formatter.h"
+#include "LapicTimer.h"
+#include "PhysicalMemory.h"
+#include "Pic8259.h"
+#include "PriorityQueue.h"
+#include "SlabAllocator.h"
+#include "Spinlock.h"
+#include "Task.h"
+#include "Thread.h"
+#include "Tsc.h"
 
 #endif

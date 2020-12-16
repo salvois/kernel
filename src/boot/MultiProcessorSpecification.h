@@ -15,10 +15,11 @@ You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
-#ifndef MULTIPROCESSORSPECIFICATION_H_INCLUDED
-#define MULTIPROCESSORSPECIFICATION_H_INCLUDED
+#ifndef BOOT_MULTIPROCESSORSPECIFICATION_H_INCLUDED
+#define BOOT_MULTIPROCESSORSPECIFICATION_H_INCLUDED
 
 #include "stdint.h"
+#include "../PhysicalMemory.h"
 
 typedef struct MpFloatingPointer {
     uint32_t signature; // "_MP_" = 0x5F504D5F

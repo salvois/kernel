@@ -15,25 +15,11 @@ You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
-#ifndef KERNEL_H_INCLUDED
-#define	KERNEL_H_INCLUDED
+#ifndef BOOT_LAPICTIMER_H_INCLUDED
+#define BOOT_LAPICTIMER_H_INCLUDED
 
 #include "Types.h"
-#include "hardware.h"
-#include "Acpi.h"
-#include "AddressSpace.h"
-#include "Cpu.h"
-#include "ElfLoader.h"
-#include "Formatter.h"
-#include "LapicTimer.h"
-#include "Multiboot.h"
-#include "MultiProcessorSpecification.h"
-#include "PhysicalMemory.h"
-#include "PriorityQueue.h"
-#include "SlabAllocator.h"
-#include "Spinlock.h"
-#include "Task.h"
-#include "Thread.h"
-#include "Tsc.h"
+
+void LapicTimer_initialize(LapicTimer *lt);
 
 #endif
