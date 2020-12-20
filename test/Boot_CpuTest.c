@@ -51,7 +51,7 @@ static void assertCpuProperlyInitialized(Cpu *cpu, int index, int lapicId) {
     ASSERT(memcmp(cpu->idleThread.regs, &expectedIdleThreadRegisters, sizeof(ThreadRegisters)) == 0);
 }
 
-static void BootCpuTest_initializeCpuStructs_multiProcessor() {
+static void Boot_CpuTest_initializeCpuStructs_multiProcessor() {
     const size_t totalMemoryFrames = 3;
     struct {
         Cpu cpu1;
@@ -81,7 +81,7 @@ static void BootCpuTest_initializeCpuStructs_multiProcessor() {
     assertCpuProperlyInitialized(&fakePhysicalMemory.cpu1, 1, 0x02);
 }
 
-static void BootCpuTest_initializeCpuStructs_noMultiProcessorSpecification() {
+static void Boot_CpuTest_initializeCpuStructs_noMultiProcessorSpecification() {
     const size_t totalMemoryFrames = 2;
     struct {
         Cpu cpu0;
@@ -99,7 +99,7 @@ static void BootCpuTest_initializeCpuStructs_noMultiProcessorSpecification() {
     assertCpuProperlyInitialized(&fakePhysicalMemory.cpu0, 0, 0x00);
 }
 
-void BootCpuTest_run() {
-    RUN_TEST(BootCpuTest_initializeCpuStructs_multiProcessor);
-    RUN_TEST(BootCpuTest_initializeCpuStructs_noMultiProcessorSpecification);
+void Boot_CpuTest_run() {
+    RUN_TEST(Boot_CpuTest_initializeCpuStructs_multiProcessor);
+    RUN_TEST(Boot_CpuTest_initializeCpuStructs_noMultiProcessorSpecification);
 }

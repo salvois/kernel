@@ -19,7 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "kernel.h"
 #include "hardware/hardware.h"
 
-static void MultiProcessorSpecificationTest_doSearchRootSystemDescriptorPointer_present() {
+static void Boot_MultiProcessorSpecificationTest_doSearchRootSystemDescriptorPointer_present() {
     __attribute__ ((aligned(PAGE_SIZE))) uint8_t fakePhysicalMemory[PAGE_SIZE];
     MpFloatingPointer expectedMpfp = {
         .signature = MPFLOATINGPOINTER_SIGNATURE,
@@ -39,7 +39,7 @@ static void MultiProcessorSpecificationTest_doSearchRootSystemDescriptorPointer_
     ASSERT(memcmp(actualMpfp, &expectedMpfp, sizeof(MpFloatingPointer)) == 0);
 }
 
-static void MultiProcessorSpecificationTest_doSearchRootSystemDescriptorPointer_wrongChecksum() {
+static void Boot_MultiProcessorSpecificationTest_doSearchRootSystemDescriptorPointer_wrongChecksum() {
     __attribute__ ((aligned(PAGE_SIZE))) uint8_t fakePhysicalMemory[PAGE_SIZE];
     MpFloatingPointer expectedMpfp = {
         .signature = MPFLOATINGPOINTER_SIGNATURE,
@@ -59,7 +59,7 @@ static void MultiProcessorSpecificationTest_doSearchRootSystemDescriptorPointer_
     ASSERT(actualMpfp == NULL);
 }
 
-static void MultiProcessorSpecificationTest_doSearchRootSystemDescriptorPointer_missing() {
+static void Boot_MultiProcessorSpecificationTest_doSearchRootSystemDescriptorPointer_missing() {
     __attribute__ ((aligned(PAGE_SIZE))) uint8_t fakePhysicalMemory[PAGE_SIZE];
     memzero(fakePhysicalMemory, PAGE_SIZE);
     
@@ -68,7 +68,7 @@ static void MultiProcessorSpecificationTest_doSearchRootSystemDescriptorPointer_
     ASSERT(actualMpfp == NULL);
 }
 
-static void MultiProcessorSpecificationTest_scanProcessors_callback(void *closure, int lapicId) {
+static void Boot_MultiProcessorSpecificationTest_scanProcessors_callback(void *closure, int lapicId) {
     int *callCount = (int *) closure;
     ASSERT(*callCount < 2);
     ASSERT(*callCount != 0 || lapicId == 0x00);
@@ -76,7 +76,7 @@ static void MultiProcessorSpecificationTest_scanProcessors_callback(void *closur
     (*callCount)++;
 }
 
-static void MultiProcessorSpecificationTest_scanProcessors() {
+static void Boot_MultiProcessorSpecificationTest_scanProcessors() {
     struct {
         MpConfigHeader header;
         MpConfigProcessor processors[3];
@@ -92,12 +92,12 @@ static void MultiProcessorSpecificationTest_scanProcessors() {
     };
     int callCount = 0;
 
-    MultiProcessorSpecification_scanProcessors(&fakeMemory.header, &callCount, MultiProcessorSpecificationTest_scanProcessors_callback);
+    MultiProcessorSpecification_scanProcessors(&fakeMemory.header, &callCount, Boot_MultiProcessorSpecificationTest_scanProcessors_callback);
 }
 
-void MultiProcessorSpecificationTest_run() {
-    RUN_TEST(MultiProcessorSpecificationTest_doSearchRootSystemDescriptorPointer_present);
-    RUN_TEST(MultiProcessorSpecificationTest_doSearchRootSystemDescriptorPointer_wrongChecksum);
-    RUN_TEST(MultiProcessorSpecificationTest_doSearchRootSystemDescriptorPointer_missing);
-    RUN_TEST(MultiProcessorSpecificationTest_scanProcessors);
+void Boot_MultiProcessorSpecificationTest_run() {
+    RUN_TEST(Boot_MultiProcessorSpecificationTest_doSearchRootSystemDescriptorPointer_present);
+    RUN_TEST(Boot_MultiProcessorSpecificationTest_doSearchRootSystemDescriptorPointer_wrongChecksum);
+    RUN_TEST(Boot_MultiProcessorSpecificationTest_doSearchRootSystemDescriptorPointer_missing);
+    RUN_TEST(Boot_MultiProcessorSpecificationTest_scanProcessors);
 }

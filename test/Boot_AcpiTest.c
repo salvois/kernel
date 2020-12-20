@@ -19,7 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "kernel.h"
 #include "hardware/hardware.h"
 
-static void AcpiTest_doSearchRootSystemDescriptorPointer_present() {
+static void Boot_AcpiTest_doSearchRootSystemDescriptorPointer_present() {
     __attribute__ ((aligned(PAGE_SIZE))) uint8_t fakePhysicalMemory[PAGE_SIZE];
     AcpiRootSystemDescPointer expectedRsdp = {
         .signature = "RSD PTR ",
@@ -40,7 +40,7 @@ static void AcpiTest_doSearchRootSystemDescriptorPointer_present() {
     ASSERT(memcmp(actualRsdp, &expectedRsdp, sizeof(AcpiRootSystemDescPointer)) == 0);
 }
 
-static void AcpiTest_doSearchRootSystemDescriptorPointer_wrongChecksum() {
+static void Boot_AcpiTest_doSearchRootSystemDescriptorPointer_wrongChecksum() {
     __attribute__ ((aligned(PAGE_SIZE))) uint8_t fakePhysicalMemory[PAGE_SIZE];
     AcpiRootSystemDescPointer expectedRsdp = {
         .signature = "RSD PTR ",
@@ -61,7 +61,7 @@ static void AcpiTest_doSearchRootSystemDescriptorPointer_wrongChecksum() {
     ASSERT(actualRsdp == NULL);
 }
 
-static void AcpiTest_doSearchRootSystemDescriptorPointer_missing() {
+static void Boot_AcpiTest_doSearchRootSystemDescriptorPointer_missing() {
     __attribute__ ((aligned(PAGE_SIZE))) uint8_t fakePhysicalMemory[PAGE_SIZE];
     memzero(fakePhysicalMemory, PAGE_SIZE);
     
@@ -70,7 +70,7 @@ static void AcpiTest_doSearchRootSystemDescriptorPointer_missing() {
     ASSERT(actualRsdp == NULL);
 }
 
-static void AcpiTest_mapToTemporaryArea_firstMap() {
+static void Boot_AcpiTest_mapToTemporaryArea_firstMap() {
     memzero(&Boot_kernelPageDirectory, sizeof(PageTable));
     theFakeHardware = (FakeHardware) { .lastTlbInvalidationAddress = makeVirtualAddress(0) };
 
@@ -82,7 +82,7 @@ static void AcpiTest_mapToTemporaryArea_firstMap() {
     ASSERT(theFakeHardware.lastTlbInvalidationAddress.v == 0xF8C00000);
 }
 
-static void AcpiTest_mapToTemporaryArea_alreadyMapped() {
+static void Boot_AcpiTest_mapToTemporaryArea_alreadyMapped() {
     memzero(&Boot_kernelPageDirectory, sizeof(PageTable));
     Boot_kernelPageDirectory.entries[0x3E2] = 0x12000000 | ptLargePage | ptPresent;
     Boot_kernelPageDirectory.entries[0x3E3] = 0x12400000 | ptLargePage | ptPresent;
@@ -98,7 +98,7 @@ static void *fakeMapToTemporaryArea(PhysicalAddress address, int tempAreaIndex) 
     return (void *) address.v;
 }
 
-static void AcpiTest_doFindConfig() {
+static void Boot_AcpiTest_doFindConfig() {
     __attribute__ ((aligned(PAGE_SIZE))) uint8_t fakePhysicalMemory[PAGE_SIZE];
     memzero(fakePhysicalMemory, PAGE_SIZE);
     memzero(&Acpi_fadt, sizeof(Acpi_fadt));
@@ -139,11 +139,11 @@ static void AcpiTest_doFindConfig() {
     ASSERT(memcmp(&Acpi_hpet, &expectedHpet, sizeof(AcpiHpet)) == 0);
 }
 
-void AcpiTest_run() {
-    RUN_TEST(AcpiTest_doSearchRootSystemDescriptorPointer_present);
-    RUN_TEST(AcpiTest_doSearchRootSystemDescriptorPointer_wrongChecksum);
-    RUN_TEST(AcpiTest_doSearchRootSystemDescriptorPointer_missing);
-    RUN_TEST(AcpiTest_mapToTemporaryArea_firstMap);
-    RUN_TEST(AcpiTest_mapToTemporaryArea_alreadyMapped);
-    RUN_TEST(AcpiTest_doFindConfig);
+void Boot_AcpiTest_run() {
+    RUN_TEST(Boot_AcpiTest_doSearchRootSystemDescriptorPointer_present);
+    RUN_TEST(Boot_AcpiTest_doSearchRootSystemDescriptorPointer_wrongChecksum);
+    RUN_TEST(Boot_AcpiTest_doSearchRootSystemDescriptorPointer_missing);
+    RUN_TEST(Boot_AcpiTest_mapToTemporaryArea_firstMap);
+    RUN_TEST(Boot_AcpiTest_mapToTemporaryArea_alreadyMapped);
+    RUN_TEST(Boot_AcpiTest_doFindConfig);
 }

@@ -94,15 +94,16 @@
                      displayName="KernelTest"
                      projectFiles="true"
                      kind="TEST">
-        <itemPath>test/AcpiTest.c</itemPath>
         <itemPath>test/AddressSpaceTest.c</itemPath>
-        <itemPath>test/BootCpuTest.c</itemPath>
+        <itemPath>test/Boot_AcpiTest.c</itemPath>
+        <itemPath>test/Boot_CpuTest.c</itemPath>
+        <itemPath>test/Boot_MultiProcessorSpecificationTest.c</itemPath>
+        <itemPath>test/Boot_MultibootTest.c</itemPath>
+        <itemPath>test/Boot_PhysicalMemoryTest.c</itemPath>
         <itemPath>test/CpuNodeTest.c</itemPath>
         <itemPath>test/CpuTest.c</itemPath>
         <itemPath>test/LibcTest.c</itemPath>
         <itemPath>test/LinkedListTest.c</itemPath>
-        <itemPath>test/MultiProcessorSpecificationTest.c</itemPath>
-        <itemPath>test/MultibootTest.c</itemPath>
         <itemPath>test/PhysicalMemoryTest.c</itemPath>
         <itemPath>test/PriorityQueueTest.c</itemPath>
         <itemPath>test/SlabAllocatorTest.c</itemPath>
@@ -303,11 +304,20 @@
       </item>
       <item path="src/kernel_asm.h" ex="false" tool="3" flavor2="0">
       </item>
-      <item path="test/AcpiTest.c" ex="false" tool="0" flavor2="0">
-      </item>
       <item path="test/AddressSpaceTest.c" ex="false" tool="0" flavor2="0">
       </item>
-      <item path="test/BootCpuTest.c" ex="false" tool="0" flavor2="0">
+      <item path="test/Boot_AcpiTest.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="test/Boot_CpuTest.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="test/Boot_MultiProcessorSpecificationTest.c"
+            ex="false"
+            tool="0"
+            flavor2="0">
+      </item>
+      <item path="test/Boot_MultibootTest.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="test/Boot_PhysicalMemoryTest.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="test/CpuNodeTest.c" ex="false" tool="0" flavor2="0">
       </item>
@@ -316,13 +326,6 @@
       <item path="test/LibcTest.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="test/LinkedListTest.c" ex="false" tool="0" flavor2="0">
-      </item>
-      <item path="test/MultiProcessorSpecificationTest.c"
-            ex="false"
-            tool="0"
-            flavor2="0">
-      </item>
-      <item path="test/MultibootTest.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="test/PhysicalMemoryTest.c" ex="false" tool="0" flavor2="0">
       </item>
@@ -527,11 +530,20 @@
       </item>
       <item path="src/kernel_asm.h" ex="false" tool="3" flavor2="0">
       </item>
-      <item path="test/AcpiTest.c" ex="false" tool="0" flavor2="0">
-      </item>
       <item path="test/AddressSpaceTest.c" ex="false" tool="0" flavor2="0">
       </item>
-      <item path="test/BootCpuTest.c" ex="false" tool="0" flavor2="0">
+      <item path="test/Boot_AcpiTest.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="test/Boot_CpuTest.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="test/Boot_MultiProcessorSpecificationTest.c"
+            ex="false"
+            tool="0"
+            flavor2="0">
+      </item>
+      <item path="test/Boot_MultibootTest.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="test/Boot_PhysicalMemoryTest.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="test/CpuNodeTest.c" ex="false" tool="0" flavor2="0">
       </item>
@@ -540,13 +552,6 @@
       <item path="test/LibcTest.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="test/LinkedListTest.c" ex="false" tool="0" flavor2="0">
-      </item>
-      <item path="test/MultiProcessorSpecificationTest.c"
-            ex="false"
-            tool="0"
-            flavor2="0">
-      </item>
-      <item path="test/MultibootTest.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="test/PhysicalMemoryTest.c" ex="false" tool="0" flavor2="0">
       </item>

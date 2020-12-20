@@ -25,13 +25,14 @@ extern void CpuNodeTest_run();
 extern void CpuTest_run();
 extern void PriorityQueueTest_run();
 extern void LinkedListTest_run();
+extern void Boot_PhysicalMemoryTest_run();
 extern void PhysicalMemoryTest_run();
-extern void MultibootTest_run();
+extern void Boot_MultibootTest_run();
 extern void SlabAllocatorTest_run();
 extern void AddressSpaceTest_run();
-extern void AcpiTest_run();
-extern void MultiProcessorSpecificationTest_run();
-extern void BootCpuTest_run();
+extern void Boot_AcpiTest_run();
+extern void Boot_MultiProcessorSpecificationTest_run();
+extern void Boot_CpuTest_run();
 
 int Log_printf(const char *format, ...) { return 0; }
 int Video_printf(const char *format, ...) { return 0; }
@@ -43,12 +44,13 @@ int main() {
     RUN_SUITE(CpuTest_run);
     RUN_SUITE(PriorityQueueTest_run);
     RUN_SUITE(LinkedListTest_run);
+    RUN_SUITE(Boot_PhysicalMemoryTest_run);
     RUN_SUITE(PhysicalMemoryTest_run);
-    RUN_SUITE(MultibootTest_run);
+    RUN_SUITE(Boot_MultibootTest_run);
     RUN_SUITE(SlabAllocatorTest_run);
     RUN_SUITE(AddressSpaceTest_run);
-    RUN_SUITE(AcpiTest_run);
-    RUN_SUITE(MultiProcessorSpecificationTest_run);
-    RUN_SUITE(BootCpuTest_run);
+    RUN_SUITE(Boot_AcpiTest_run);
+    RUN_SUITE(Boot_MultiProcessorSpecificationTest_run);
+    RUN_SUITE(Boot_CpuTest_run);
     return exitCode;
 }

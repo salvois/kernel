@@ -49,13 +49,14 @@ TEST_SOURCES = \
   src/PhysicalMemory.c \
   src/SlabAllocator.c \
   test/hardware/hardware.c \
-  test/AcpiTest.c \
+  test/Boot_AcpiTest.c \
+  test/Boot_CpuTest.c \
+  test/Boot_MultibootTest.c \
+  test/Boot_MultiProcessorSpecificationTest.c \
+  test/Boot_PhysicalMemoryTest.c \
   test/AddressSpaceTest.c \
-  test/BootCpuTest.c \
   test/LibcTest.c \
   test/LinkedListTest.c \
-  test/MultibootTest.c \
-  test/MultiProcessorSpecificationTest.c \
   test/CpuNodeTest.c \
   test/CpuTest.c \
   test/PriorityQueueTest.c \
