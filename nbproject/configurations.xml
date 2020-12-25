@@ -40,6 +40,10 @@
         <itemPath>src/boot/entry.S</itemPath>
         <itemPath>src/boot/entry.c</itemPath>
       </logicalFolder>
+      <logicalFolder name="f3" displayName="demo" projectFiles="true">
+        <itemPath>demo/EndlessLoop.c</itemPath>
+        <itemPath>demo/Sysenter.c</itemPath>
+      </logicalFolder>
       <logicalFolder name="f1" displayName="hardware" projectFiles="true">
         <itemPath>src/hardware/hardware.h</itemPath>
         <itemPath>src/hardware/ia32.h</itemPath>
@@ -142,6 +146,10 @@
         </cTool>
       </compileType>
       <item path="README.asciidoc" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="demo/EndlessLoop.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="demo/Sysenter.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="doc/Design.asciidoc" ex="false" tool="3" flavor2="0">
       </item>
@@ -368,6 +376,10 @@
         </asmTool>
       </compileType>
       <item path="README.asciidoc" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="demo/EndlessLoop.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="demo/Sysenter.c" ex="false" tool="0" flavor2="0">
       </item>
       <item path="doc/Design.asciidoc" ex="false" tool="3" flavor2="0">
       </item>

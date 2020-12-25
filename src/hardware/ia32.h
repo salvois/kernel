@@ -121,7 +121,7 @@ static inline uint64_t Tsc_read() {
 
 /** Switches the current processor to the specified address space. */
 static inline void AddressSpace_activate(AddressSpace *as) {
-    Log_printf("Switching to address space with root %p.\n", as->root);
+    //Log_printf("Switching to address space with root %p.\n", as->root);
     asm volatile("mov %0, %%cr3" : : "r" (as->root) : "memory");
 }
 
