@@ -132,9 +132,9 @@ __attribute__((fastcall)) static void Cpu_doNothingInterrupt(Cpu *cpu, void *par
  */
 void Cpu_switchToThread(Cpu *cpu, Thread *next) {
     Thread *curr = cpu->currentThread;
-    Log_printf("Cpu %d switching from thread %p (prio=%d) to thread %p (prio=%d).\n", cpu->lapicId,
-            curr, curr->queueNode.key,
-            next, next->queueNode.key);
+//    Log_printf("Cpu %d switching from thread %p (prio=%d) to thread %p (prio=%d).\n", cpu->lapicId,
+//            curr, curr->queueNode.key,
+//            next, next->queueNode.key);
     ThreadRegisters *cr = curr->regs;
     ThreadRegisters *nr = next->regs;
     if (UNLIKELY(nr->ldt != 0)) {
@@ -213,7 +213,7 @@ void Cpu_setTimesliceTimer(Cpu *cpu) {
     if (cpu->timesliceTimerEnabled) {
         assert(cpu->currentThread->timesliceRemaining > TIMESLICE_TOLERANCE);
         uint32_t ticks = LapicTimer_convertNanosecondsToTicks(&cpu->lapicTimer, cpu->currentThread->timesliceRemaining);
-        Log_printf("Cpu %d enabling timeslice in %d LAPIC timer ticks.\n", cpu->lapicId, ticks);
+//        Log_printf("Cpu %d enabling timeslice in %d LAPIC timer ticks.\n", cpu->lapicId, ticks);
         Cpu_writeLocalApic(lapicTimerInitialCount, ticks);
     }
 }
@@ -276,10 +276,10 @@ void Cpu_schedule(Cpu *cpu) {
     Spinlock_lock(&cpu->cpuNode->lock);
     cpu->rescheduleNeeded = false;
     bool timesliced = Cpu_accountTimesliceAndCheckExpiration(cpu);
-    Thread *next = Cpu_findNextThreadAndUpdateReadyQueue(cpu, timesliced);
+    Thread *next = Cpu_findNextThreadAndUpdateReadyQueue(cpu, timesliced); // ~35 TSC ticks
     if (next != cpu->currentThread) {
-        Cpu_switchToThread(cpu, next);
-        Cpu_setTimesliceTimer(cpu);
+        Cpu_switchToThread(cpu, next); // ~200 TSC ticks
+        Cpu_setTimesliceTimer(cpu); // ~15 TSC ticks
     } else if (timesliced) {
         Cpu_setTimesliceTimer(cpu);
     }
@@ -355,6 +355,8 @@ static void Cpu_handleSysenter(Cpu *cpu) {
  * @return Pointer to the ThreadRegister structure of the thread to resume.
  */
 __attribute__((fastcall)) ThreadRegisters *Cpu_handleSyscallOrInterrupt(Cpu *cpu) {
+    const int logMaxInterruptCount = 12;
+    const int maxInterruptCount = 1 << logMaxInterruptCount;
     unsigned vector = cpu->currentThread->regs->vector & THREADREGISTERS_VECTOR_MASK;
     //Log_printf("%s: vector %d.\n", __func__, vector);
     if (vector == THREADREGISTERS_VECTOR_SYSENTER) {
@@ -380,10 +382,12 @@ __attribute__((fastcall)) ThreadRegisters *Cpu_handleSyscallOrInterrupt(Cpu *cpu
         //IsrTableEntry *isrTableEntry = &Cpu_isrTable[cpu->currentThread->regs->vector];
         //isrTableEntry->isr(isrTableEntry->param, cpu->currentThread->regs);
         //uint32_t returnSp = (uint32_t) cpu->currentThread->regs + offsetof(ThreadRegisters, es);
-        Cpu_exitKernel(cpu);
+        Cpu_exitKernel(cpu); // ~440 TSC ticks
         cpu->interruptTsc += Tsc_read() - beginTsc;
-        if ((cpu->interruptCount & 0xFFF) == 0) {
-            Log_printf("Cpu %d interrupt TSC=0x%016llX, count=0x%016llX.\n", cpu->lapicId, cpu->interruptTsc, cpu->interruptCount);
+        if (cpu->interruptCount == maxInterruptCount) {
+            Video_printf("Cpu %d interrupt TSC=0x%016llX (%d).\n", cpu->lapicId, cpu->interruptTsc >> logMaxInterruptCount, (int) (cpu->interruptTsc >> logMaxInterruptCount));
+            cpu->interruptCount = 0;
+            cpu->interruptTsc = 0;
         }
     }
     return cpu->currentThread->regs;
