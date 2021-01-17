@@ -36,9 +36,9 @@ void PhysicalMemoryRegion_add(PhysicalMemoryRegion *pmr, FrameNumber begin, Fram
     size_t count = end.v - begin.v;
     for (size_t i = 0; i < count; i++) {
         Frame *frame = getFrame(addToFrameNumber(begin, i));
-        if (frame->task != &PhysicalMemory_freeFramesDummyOwner) {
-            frame->virtualAddress = VIRTUAL_ADDRESS_UNMAPPED;
-            frame->task = &PhysicalMemory_freeFramesDummyOwner;
+        if (Frame_getTask(frame) != &PhysicalMemory_freeFramesDummyOwner) {
+            frame->virtualAddress = makeVirtualAddress(0);
+            Frame_setTaskAndType(frame, &PhysicalMemory_freeFramesDummyOwner, FrameType_unmapped);
             LinkedList_insertAfter(&frame->node, &pmr->freeListHead);
             pmr->freeFrameCount++;
         }
@@ -51,9 +51,9 @@ void PhysicalMemoryRegion_remove(PhysicalMemoryRegion *pmr, FrameNumber begin, F
     size_t count = end.v - begin.v;
     for (size_t i = 0; i < count; i++) {
         Frame *frame = getFrame(addToFrameNumber(begin, i));
-        if (frame->task == &PhysicalMemory_freeFramesDummyOwner) {
-            frame->virtualAddress = VIRTUAL_ADDRESS_UNMAPPED;
-            frame->task = NULL;
+        if (Frame_getTask(frame) == &PhysicalMemory_freeFramesDummyOwner) {
+            frame->virtualAddress = makeVirtualAddress(0);
+            Frame_setTaskAndType(frame, NULL, FrameType_unmapped);
             LinkedList_remove(&frame->node);
             pmr->freeFrameCount--;
         }

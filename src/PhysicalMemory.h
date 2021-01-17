@@ -53,15 +53,22 @@ typedef struct PhysicalMemoryRegion {
     size_t freeFrameCount;
 } PhysicalMemoryRegion;
 
+typedef enum FrameType {
+    FrameType_unmapped,
+    FrameType_user,
+    FrameType_capability
+} FrameType;
+
 /** Descriptor of a physical memory frame. */
 typedef struct Frame {
-    Task *task;
+    uintptr_t taskAndType;
     VirtualAddress virtualAddress;
     LinkedList_Node node;
 } Frame;
 
-#define VIRTUAL_ADDRESS_UNMAPPED ((VirtualAddress) { 0 })
-#define VIRTUAL_ADDRESS_CAPABILITY_SPACE ((VirtualAddress) { 1 })
+static inline Task *Frame_getTask(Frame *frame) { return (Task *) (frame->taskAndType & ~0xF); }
+static inline FrameType Frame_getType(Frame *frame) { return (FrameType) (frame->taskAndType & 0xF); }
+static inline void Frame_setTaskAndType(Frame *frame, Task *task, FrameType frameType) { frame->taskAndType = (uintptr_t) task | frameType; }
 
 extern Frame *PhysicalMemory_frameDescriptors;
 extern FrameNumber PhysicalMemory_firstFrame;

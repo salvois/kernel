@@ -56,11 +56,11 @@ Capability *Task_allocateCapability(Task *task, uintptr_t obj, uintptr_t badge) 
  * @param index Index of the capability to look up.
  * @return Pointer to the index-th capability of the task, or NULL index exceeds the size of the capability space.
  */
-Capability *Task_lookupCapability(Task *task, PhysicalAddress address) {
-    FrameNumber frameNumber = floorToFrame(address);
+Capability *Task_lookupCapability(Task *task, CapabilityAddress address) {
+    FrameNumber frameNumber = floorToFrame(physicalAddress(address.v));
     if (frameNumber.v >= PhysicalMemory_totalMemoryFrames) return NULL;
     Frame *frame = getFrame(frameNumber);
-    if (frame->task != task || frame->virtualAddress.v != VIRTUAL_ADDRESS_CAPABILITY_SPACE.v) return NULL;
+    if (Frame_getTask(frame) != task || Frame_getType(frame) != FrameType_capability) return NULL;
     return phys2virt(physicalAddress(address.v & ~0xF));
 }
 

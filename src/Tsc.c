@@ -32,9 +32,9 @@ void __attribute__((section(".boot"))) Tsc_initialize(Tsc *tsc) {
      * For the nsPerTick coefficient, a shift of at most 20 allows frequencies as low as 500 KHz.
      * For the ticksPerNs coefficient, a shift of at most 23 allows frequencies as high as 500 GHz.
      */
-    tsc->nsPerTick = div(292935555ULL * realAcpiTicks + tscDiff - 1, tscDiff); // 10^9*2^20/3579545
-    tsc->usPerTick = div(1199864032ULL * realAcpiTicks + tscDiff - 1, tscDiff); // 10^6*2^32/3579545
-    tsc->ticksPerNs = div(30027ULL * tscDiff + realAcpiTicks - 1, realAcpiTicks); // 2^23*3579545/10^9
+    tsc->nsPerTick = div(292935555ULL * realAcpiTicks + tscDiff - 1, tscDiff); // 10^9*2^20/ACPI_PMTIMER_FREQUENCY
+    tsc->usPerTick = div(1199864032ULL * realAcpiTicks + tscDiff - 1, tscDiff); // 10^6*2^32/ACPI_PMTIMER_FREQUENCY
+    tsc->ticksPerNs = div(30027ULL * tscDiff + realAcpiTicks - 1, realAcpiTicks); // 2^23*ACPI_PMTIMER_FREQUENCY/10^9
     Log_printf("TSC calibration: nsPerTick=0x%08X >> 20, usPerTick=0x%08X >> 32, ticksPerNs=0x%08X >> 23.\n", tsc->nsPerTick, tsc->usPerTick, tsc->ticksPerNs);
 }
 

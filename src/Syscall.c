@@ -14,7 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-*/
+ */
 #include "kernel.h"
 
 int Syscall_createChannel(Task *task) {
@@ -28,7 +28,7 @@ int Syscall_createChannel(Task *task) {
     return Task_getCapabilityAddress(cap);
 }
 
-int Syscall_deleteCapability(Task *task, PhysicalAddress index) {
+int Syscall_deleteCapability(Task *task, CapabilityAddress index) {
     Capability *cap = Task_lookupCapability(task, index);
     if (cap == NULL) return -EINVAL;
     KobjType kobjType = Capability_getObjectType(cap);

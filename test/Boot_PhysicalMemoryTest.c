@@ -198,7 +198,7 @@ static void Boot_PhysicalMemoryTest_initializeFromMultibootV1() {
     ASSERT(multibootModulesEnd.v == 16 * PAGE_SIZE);
     ASSERT(physicalAddressUpperBound.v == 28 * PAGE_SIZE);
     for (size_t i = 0; i < 30; i++)
-        ASSERT((!availableFrames[i] && frames[i].task == NULL) || (availableFrames[i] && frames[i].task != NULL));
+        ASSERT((!availableFrames[i] && Frame_getTask(&frames[i]) == NULL) || (availableFrames[i] && Frame_getTask(&frames[i]) != NULL));
 }
 
 

@@ -56,7 +56,7 @@ static void SlabAllocatorTest_allocateFirst() {
     void *item = SlabAllocator_allocate(&allocator);
     
     const size_t expectedItemsPerSlab = PAGE_SIZE / itemSize;
-    ASSERT(frames[0].task == &task);
+    ASSERT(Frame_getTask(&frames[0]) == &task);
     ASSERT(allocator.freeItems == NULL);
     ASSERT(allocator.itemSize == itemSize);
     ASSERT(allocator.itemsPerSlab == expectedItemsPerSlab);
@@ -79,7 +79,7 @@ static void SlabAllocatorTest_allocateSecond() {
     void *item = SlabAllocator_allocate(&allocator);
     
     const size_t expectedItemsPerSlab = PAGE_SIZE / itemSize;
-    ASSERT(frames[0].task == &task);
+    ASSERT(Frame_getTask(&frames[0]) == &task);
     ASSERT(allocator.freeItems == NULL);
     ASSERT(allocator.itemSize == itemSize);
     ASSERT(allocator.itemsPerSlab == expectedItemsPerSlab);
@@ -103,8 +103,8 @@ static void SlabAllocatorTest_allocateBeyondPage() {
         
     void *item = SlabAllocator_allocate(&allocator);
     
-    ASSERT(frames[0].task == &task);
-    ASSERT(frames[1].task == &task);
+    ASSERT(Frame_getTask(&frames[0]) == &task);
+    ASSERT(Frame_getTask(&frames[1]) == &task);
     ASSERT(allocator.freeItems == NULL);
     ASSERT(allocator.itemSize == itemSize);
     ASSERT(allocator.itemsPerSlab == expectedItemsPerSlab);
@@ -127,7 +127,7 @@ static void SlabAllocatorTest_deallocateFirst() {
     SlabAllocator_deallocate(&allocator, item);
     
     const size_t expectedItemsPerSlab = PAGE_SIZE / itemSize;
-    ASSERT(frames[0].task == &task);
+    ASSERT(Frame_getTask(&frames[0]) == &task);
     ASSERT(allocator.freeItems == (SlabAllocator_FreeItem *) &fakePhysicalMemory[0]);
     ASSERT(allocator.freeItems->next == NULL);
     ASSERT(allocator.itemSize == itemSize);
@@ -152,7 +152,7 @@ static void SlabAllocatorTest_deallocateSecond() {
     SlabAllocator_deallocate(&allocator, secondItem);
     
     const size_t expectedItemsPerSlab = PAGE_SIZE / itemSize;
-    ASSERT(frames[0].task == &task);
+    ASSERT(Frame_getTask(&frames[0]) == &task);
     ASSERT(allocator.freeItems == (SlabAllocator_FreeItem *) &fakePhysicalMemory[itemSize]);
     ASSERT(allocator.freeItems->next == (SlabAllocator_FreeItem *) &fakePhysicalMemory[0]);
     ASSERT(allocator.freeItems->next->next == NULL);

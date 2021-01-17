@@ -37,9 +37,9 @@ FrameNumber PhysicalMemoryRegion_allocate(PhysicalMemoryRegion *pmr, Task *task)
     if (UNLIKELY(pmr->freeFrameCount == 0))
         return frameNumber(0);
     Frame *frame = Frame_fromNode(pmr->freeListHead.next);
-    assert(frame->task == &PhysicalMemory_freeFramesDummyOwner);
-    frame->task = task;
-    frame->virtualAddress = VIRTUAL_ADDRESS_UNMAPPED;
+    assert(Frame_getTask(frame) == &PhysicalMemory_freeFramesDummyOwner);
+    Frame_setTaskAndType(frame, task, FrameType_unmapped);
+    frame->virtualAddress = makeVirtualAddress(0);
     LinkedList_remove(pmr->freeListHead.next);
     pmr->freeFrameCount--;
     return getFrameNumber(frame);
@@ -47,9 +47,9 @@ FrameNumber PhysicalMemoryRegion_allocate(PhysicalMemoryRegion *pmr, Task *task)
 
 void PhysicalMemoryRegion_deallocate(PhysicalMemoryRegion *pmr, FrameNumber frameNumber) {
     Frame *frame = getFrame(frameNumber);
-    assert(frame->task != &PhysicalMemory_freeFramesDummyOwner);
-    frame->virtualAddress = VIRTUAL_ADDRESS_UNMAPPED;
-    frame->task = &PhysicalMemory_freeFramesDummyOwner;
+    assert(Frame_getTask(frame) != &PhysicalMemory_freeFramesDummyOwner);
+    frame->virtualAddress = makeVirtualAddress(0);
+    Frame_setTaskAndType(frame, &PhysicalMemory_freeFramesDummyOwner, FrameType_unmapped);
     LinkedList_insertAfter(&frame->node, &pmr->freeListHead);
     pmr->freeFrameCount++;
 }

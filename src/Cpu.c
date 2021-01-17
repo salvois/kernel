@@ -297,28 +297,24 @@ void Cpu_exitKernel(Cpu *cpu) {
     //Log_printf("Cpu %d exiting kernel with ThreadRegisters at %p.\n", cpu->lapicId, cpu->currentThread->regs);
 }
 
-/**
- * Dispatches the appropriate system call ont he specified CPU, that is
- * assumed to be the current CPU.
- */
-static void Cpu_handleSysenter(Cpu *cpu) {
-    ThreadRegisters *regs = cpu->currentThread->regs;
+static void Cpu_doHandleSysenter(Cpu *currentCpu) {
+    ThreadRegisters *regs = currentCpu->currentThread->regs;
     switch (regs->eax & 0xFF) {
 #if 0
         case 1:
-            regs->eax = Syscall_createChannel(cpu->currentThread->task);
+            regs->eax = Syscall_createChannel(currentCpu->currentThread->task);
             break;
         case 2:
-            regs->eax = Syscall_deleteCapability(cpu->currentThread->task, regs->ebx);
+            regs->eax = Syscall_deleteCapability(currentCpu->currentThread->task, regs->ebx);
             break;
         case 3:
-            regs->eax = Syscall_sendMessage(cpu, regs->eax >> 8, regs->ebx);
+            regs->eax = Syscall_sendMessage(currentCpu, regs->eax >> 8, regs->ebx);
             break;
         case 4:
-            regs->eax = Syscall_receiveMessage(cpu->currentThread, regs->ebx, (uint8_t *) regs->esi, regs->edi);
+            regs->eax = Syscall_receiveMessage(currentCpu->currentThread, regs->ebx, (uint8_t *) regs->esi, regs->edi);
             break;
         case 5:
-            regs->eax = Syscall_readMessage(cpu->currentThread, regs->ebx, regs->ebp, (uint8_t *) regs->esi, regs->edi);
+            regs->eax = Syscall_readMessage(currentCpu->currentThread, regs->ebx, regs->ebp, (uint8_t *) regs->esi, regs->edi);
             break;
 #endif
         case 127:
@@ -338,14 +334,46 @@ static void Cpu_handleSysenter(Cpu *cpu) {
                     "  ES=0x%08X\n"
                     "  EFLAGS=0x%08X\n"
                     "Continuing.\n",
-                    cpu->lapicId, regs, regs->vector, regs->eax, regs->ecx, regs->edx, regs->ebx,
+                    currentCpu->lapicId, regs, regs->vector, regs->eax, regs->ecx, regs->edx, regs->ebx,
                     regs->ebp, regs->esi, regs->edi, regs->eip, regs->cs, regs->ds, regs->es, regs->eflags);
             break;
         default:
             regs->eax = ENOSYS;
             break;
     }
-    Cpu_exitKernel(cpu);
+    Cpu_exitKernel(currentCpu);
+}
+
+static void Cpu_doHandleInterrupt(Cpu *currentCpu) {
+    const int logMaxInterruptCount = 12;
+    const int maxInterruptCount = 1 << logMaxInterruptCount;
+    uint64_t beginTsc = Tsc_read();
+    currentCpu->interruptCount++;
+    assert(currentCpu->currentThread->regs->vector < 256);
+    switch (currentCpu->currentThread->regs->vector) {
+        case lapicTimerVector:
+            currentCpu->rescheduleNeeded = true;
+            Cpu_writeLocalApic(lapicEoi, 0);
+            break;
+        case rescheduleIpiVector:
+            Log_printf("Reschedule IPI on CPU 0x%02X.\n", currentCpu->lapicId);
+            currentCpu->rescheduleNeeded = true;
+            Cpu_writeLocalApic(lapicEoi, 0);
+            break;
+        default:
+            Cpu_unhandledException(currentCpu, NULL);
+            break;
+    }
+    //IsrTableEntry *isrTableEntry = &Cpu_isrTable[cpu->currentThread->regs->vector];
+    //isrTableEntry->isr(isrTableEntry->param, cpu->currentThread->regs);
+    //uint32_t returnSp = (uint32_t) cpu->currentThread->regs + offsetof(ThreadRegisters, es);
+    Cpu_exitKernel(currentCpu); // ~440 TSC ticks
+    currentCpu->interruptTsc += Tsc_read() - beginTsc;
+    if (currentCpu->interruptCount == maxInterruptCount) {
+        Video_printf("Cpu %d interrupt TSC=0x%016llX (%d).\n", currentCpu->lapicId, currentCpu->interruptTsc >> logMaxInterruptCount, (int) (currentCpu->interruptTsc >> logMaxInterruptCount));
+        currentCpu->interruptCount = 0;
+        currentCpu->interruptTsc = 0;
+    }
 }
 
 /**
@@ -354,43 +382,14 @@ static void Cpu_handleSysenter(Cpu *cpu) {
  * @param cpu The current CPU.
  * @return Pointer to the ThreadRegister structure of the thread to resume.
  */
-__attribute__((fastcall)) ThreadRegisters *Cpu_handleSyscallOrInterrupt(Cpu *cpu) {
-    const int logMaxInterruptCount = 12;
-    const int maxInterruptCount = 1 << logMaxInterruptCount;
-    unsigned vector = cpu->currentThread->regs->vector & THREADREGISTERS_VECTOR_MASK;
-    //Log_printf("%s: vector %d.\n", __func__, vector);
+__attribute__((fastcall)) ThreadRegisters *Cpu_handleSyscallOrInterrupt(Cpu *currentCpu) {
+    unsigned vector = currentCpu->currentThread->regs->vector & THREADREGISTERS_VECTOR_MASK;
     if (vector == THREADREGISTERS_VECTOR_SYSENTER) {
-        Cpu_handleSysenter(cpu);
+        Cpu_doHandleSysenter(currentCpu);
     } else {
-        uint64_t beginTsc = Tsc_read();
-        cpu->interruptCount++;
-        assert(cpu->currentThread->regs->vector < 256);
-        switch (cpu->currentThread->regs->vector) {
-            case lapicTimerVector:
-                cpu->rescheduleNeeded = true;
-                Cpu_writeLocalApic(lapicEoi, 0);
-                break;
-            case rescheduleIpiVector:
-                Log_printf("Reschedule IPI on CPU 0x%02X.\n", cpu->lapicId);
-                cpu->rescheduleNeeded = true;
-                Cpu_writeLocalApic(lapicEoi, 0);
-                break;
-            default:
-                Cpu_unhandledException(cpu, NULL);
-                break;
-        }
-        //IsrTableEntry *isrTableEntry = &Cpu_isrTable[cpu->currentThread->regs->vector];
-        //isrTableEntry->isr(isrTableEntry->param, cpu->currentThread->regs);
-        //uint32_t returnSp = (uint32_t) cpu->currentThread->regs + offsetof(ThreadRegisters, es);
-        Cpu_exitKernel(cpu); // ~440 TSC ticks
-        cpu->interruptTsc += Tsc_read() - beginTsc;
-        if (cpu->interruptCount == maxInterruptCount) {
-            Video_printf("Cpu %d interrupt TSC=0x%016llX (%d).\n", cpu->lapicId, cpu->interruptTsc >> logMaxInterruptCount, (int) (cpu->interruptTsc >> logMaxInterruptCount));
-            cpu->interruptCount = 0;
-            cpu->interruptTsc = 0;
-        }
+        Cpu_doHandleInterrupt(currentCpu);
     }
-    return cpu->currentThread->regs;
+    return currentCpu->currentThread->regs;
 }
 
 /** Sets the interrupt service routine for the specified interrupt vector. */

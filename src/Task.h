@@ -35,9 +35,47 @@ union TaskChecker {
     char wrongSize[(sizeof(Task) & 0xF) == 0];
 }; 
 
+static inline CapabilityAddress makeCapabilityAddress(uintptr_t v) {
+    return (CapabilityAddress) { v };
+}
+
+/** Returns the channel object embedding the specified PriorityQueueNode as node member. */
+static inline Channel *Channel_fromQueueNode(PriorityQueueNode *n) {
+    return (Channel *) ((uint8_t *) n - offsetof(Channel, node));
+}
+
+/** Returns true if the priority inheritance flag has been set in the specified destination endpoint word. */
+static inline bool isPriorityInheritanceEnabled(Word endpointWord) {
+    return endpointWord & (1 << 0);
+}
+
+/** Returns true if the non-blocking flag has been set in the specified destination endpoint word. */
+static inline bool isNonBlockingEnabled(Word endpointWord) {
+    return endpointWord & (1 << 1);
+}
+
+/** Returns true if the asynchronous flag has been set in the specified destination endpoint word. */
+static inline bool isAsynchronous(Word endpointWord) {
+    return endpointWord & (1 << 2);
+}
+
+/** Returns true if the notification flag has been set in the specified destination endpoint word. */
+static inline bool isNotification(Word endpointWord) {
+    return endpointWord & (1 << 3);
+}
+
+/** Returns true if the non-blocking flag has been set in the specified destination endpoint word. */
+static inline CapabilityAddress getEndpointRef(Word endpointWord) {
+    return makeCapabilityAddress(endpointWord & ~0xF);
+}
+
+static inline unsigned getUntypedByteCount(Word messageHeader) {
+    return messageHeader & 0x3F;
+}
+
 Task       *Task_create(Task *ownerTask, uintptr_t *cap);
 Capability *Task_allocateCapability(Task *task, uintptr_t obj, uintptr_t badge);
-Capability *Task_lookupCapability(Task *task, PhysicalAddress address);
+Capability *Task_lookupCapability(Task *task, CapabilityAddress address);
 uintptr_t   Task_getCapabilityAddress(const Capability *cap);
 void        Task_deallocateCapability(Task *task, Capability *cap);
 

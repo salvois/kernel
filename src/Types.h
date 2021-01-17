@@ -59,6 +59,7 @@ typedef struct Capability Capability;
 typedef struct Thread Thread;
 typedef struct Cpu Cpu;
 typedef struct CpuNode CpuNode;
+typedef struct { uintptr_t v; } CapabilityAddress;
 typedef struct { uintptr_t v; } PhysicalAddress;
 typedef struct { uintptr_t v; } VirtualAddress;
 typedef struct { uintptr_t v; } FrameNumber;
@@ -184,17 +185,21 @@ typedef struct SlabAllocator {
  ******************************************************************************/
 
 enum {
-    Channel_dataWords = 16
+    Message_wordCount = 16,
+    Message_priorityInheritance = 1 << 0,
+    Message_nonBlocking = 1 << 1,
+    Message_asynchronous = 1 << 2,
+    Message_notification = 1 << 3
 };
 
 typedef struct Channel {
     PriorityQueueNode node;
+    Thread *sendingThread;
     Task *ownerTask;
-    Word destinationEndpoint;
-    Word responseEndpoint;
-    Word badge;
-    Word data[Channel_dataWords];
+    Word tag;
+    Word endpointBadge;
     Word padding[6];
+    uint8_t data[64];
 } Channel;
 
 /**
@@ -204,26 +209,6 @@ typedef struct Channel {
 union ChannelChecker {
     char wrongSize[sizeof(Channel) == 32 * sizeof(Word)];
 }; 
-
-/** Returns the channel object embedding the specified PriorityQueueNode as node member. */
-static inline Channel *Channel_fromQueueNode(PriorityQueueNode *n) {
-    return (Channel *) ((uint8_t *) n - offsetof(Channel, node));
-}
-
-/** Returns true if the priority inheritance flag has been set in the specified destination endpoint word. */
-static inline bool isPriorityInheritanceEnabled(Word endpointWord) {
-    return endpointWord & (1 << 0);
-}
-
-/** Returns true if the non-blocking flag has been set in the specified destination endpoint word. */
-static inline bool isNonBlockingEnabled(Word endpointWord) {
-    return endpointWord & (1 << 1);
-}
-
-/** Returns true if the non-blocking flag has been set in the specified destination endpoint word. */
-static inline Word getEndpointRef(Word endpointWord) {
-    return endpointWord & ~0xF;
-}
 
 typedef struct Endpoint {
     PriorityQueue channels;

@@ -57,5 +57,6 @@ static inline Thread *Thread_fromQueueNode(PriorityQueueNode *n) {
 }
 
 int Thread_initialize(Task *task, Thread *thread, unsigned priority, unsigned nice, uintptr_t entry, uintptr_t stackPointer);
+int Thread_block(Thread *thread, PriorityQueue *queue);
 
 #endif
