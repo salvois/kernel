@@ -98,6 +98,12 @@ static inline void *Cpu_getFaultingAddress() {
     return addr;
 }
 
+static inline uint32_t Cpu_readStackPointer() {
+    uint32_t v;
+    asm volatile("mov %%esp, %0" : "=r" (v));
+    return v;
+}
+
 /** Gets the current CPU structure masking the per-CPU kernel stack pointer. */
 static inline Cpu *Cpu_getCurrent() {
     #if WORD_SIZE == 32

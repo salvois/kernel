@@ -48,6 +48,7 @@ static void assertCpuProperlyInitialized(Cpu *cpu, int index, int lapicId) {
     ASSERT(cpu->tss.ss0 == flatKernelDS);
     ASSERT(cpu->tss.esp0 == (uint32_t) &cpu->idleThread.regsBuf + offsetof(ThreadRegisters, edi));
     ASSERT(cpu->idleThread.cpu == cpu);
+    ASSERT(cpu->kernelEntryCount == 1);
     ASSERT(memcmp(cpu->idleThread.regs, &expectedIdleThreadRegisters, sizeof(ThreadRegisters)) == 0);
 }
 

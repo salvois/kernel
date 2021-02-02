@@ -273,6 +273,7 @@ struct Thread {
     uint64_t runningTime; // Total CPU time since thread start, in microseconds
     bool cpuAffinity;
     bool kernelThread;
+    bool kernelRestartNeeded;
     uint8_t *stack; // for kernel-mode threads
     ThreadRegisters *regs; // for user-mode threads points to regsBuf, for kernel-mode threads points to bottom of the stack
     ThreadRegisters regsBuf; // for user-mode threads and the idle thread of each CPU
@@ -407,6 +408,7 @@ struct Cpu {
     bool          rescheduleNeeded;
     bool          timesliceTimerEnabled;
     uint8_t       padding0;
+    uint32_t      kernelEntryCount;
     Cpu          *thisCpu;
     CpuNode      *cpuNode;
     Thread       *currentThread;
@@ -415,14 +417,16 @@ struct Cpu {
     uint64_t      interruptCount;
     uint64_t      lastScheduleTime; // used to compute time elapsed by the current thread
     uint64_t      scheduleArrival; // value of CpuNode.scheduleOrder when this CPU was scheduled
+    // Cache line boundary
+    LapicTimer    lapicTimer; // 32 bytes
+    Tsc           tsc; // 12 bytes
+    PriorityQueue readyQueue; // per-CPU ready threads, 12 bytes
     CpuDescriptor gdt[gdtEntryCount]; // 56 bytes
     Tss           tss; // 104 bytes
-    AtomicWord    initialized; // true when boot is completed
-    LapicTimer    lapicTimer; // 32 bytes
-    Tsc           tsc; // 24 bytes
-    PriorityQueue readyQueue; // per-CPU ready threads, 24 bytes
-    Thread        idleThread; // offset 268, 320 bytes
+    Thread        idleThread; // 320 bytes
     uint8_t       stack[CPU_STACK_SIZE];
+    uint8_t       padding1[12];
+    AtomicWord    initialized; // true when boot is completed
 };
 
 /** Kernel state of a set of logical processors sharing scheduling decisions. */

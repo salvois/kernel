@@ -75,6 +75,7 @@ static void Cpu_initialize(Cpu *cpu, size_t index, size_t lapicId) {
     cpu->tss.ss0 = flatKernelDS;
     cpu->tss.esp0 = (uint32_t) cpu->idleThread.regs + offsetof(ThreadRegisters, edi); // Cpu_returnToUserMode starts by popping EDI
     cpu->rescheduleNeeded = true;
+    cpu->kernelEntryCount = 1;
     PriorityQueue_init(&cpu->readyQueue);
 }
 
@@ -107,6 +108,7 @@ void Cpu_loadCpuTables(Cpu *cpu) {
     Cpu_writeMsr(msrSysenterCs, flatKernelCS);
     Cpu_writeMsr(msrSysenterEip, (uintptr_t) &Cpu_sysenter);
     Cpu_writeMsr(msrSysenterEsp, (uintptr_t) &cpu->tss.esp0);
+    Cpu_writeGs(kernelGS);
     uint32_t a, b, c, d;
     Cpu_cpuid(1, &a, &b, &c, &d);
     Video_printf("Cpu %d features: eax=0x%08X, ebx=0x%08X, ecx=0x%08X, edx=0x%08X.\n", cpu->lapicId, a, b, c, d);

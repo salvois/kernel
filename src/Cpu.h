@@ -69,9 +69,11 @@ enum CpuFlag {
  */
 union CpuChecker {
     char wrongLapicIdOffset[offsetof(Cpu, lapicId) == CPU_LAPICID_OFFSET];
+    char wrongInKernelOffset[offsetof(Cpu, kernelEntryCount) == CPU_KERNELENTRYCOUNT_OFFSET];
     char wrongThisCpuOffset[offsetof(Cpu, thisCpu) == CPU_THISCPU_OFFSET];
     char wrongCurrentThreadOffset[offsetof(Cpu, currentThread) == CPU_CURRENTTHREAD_OFFSET];
     char wrongStackOffset[offsetof(Cpu, stack) == CPU_STACK_OFFSET];
+    char wrongTopOfStack[offsetof(Cpu, padding1) == CPU_TOP_OF_STACK];
     char wrongCpuSize[sizeof(Cpu) == CPU_STRUCT_SIZE];
     char cpuNotFittingInPage[sizeof(Cpu) <= PAGE_SIZE];
 }; 
@@ -81,6 +83,7 @@ extern Cpu *Cpu_cpus[MAX_CPU_COUNT];
 extern CpuDescriptor Cpu_idt[256];
 extern unsigned Cpu_timesliceLengths[NICE_LEVELS];
 
+void Cpu_logRegisters(Cpu *cpu);
 __attribute__((fastcall, noreturn)) int Cpu_idleThreadFunction(void *); // from Cpu_asm.S
 __attribute__((fastcall)) void Cpu_unhandledException(Cpu *cpu, void *param);
 void Cpu_returnToUserMode(uintptr_t stackPointer); // from Cpu_asm.S
@@ -92,7 +95,6 @@ void Cpu_requestReschedule(Cpu *cpu);
 bool Cpu_accountTimesliceAndCheckExpiration(Cpu *cpu);
 Thread *Cpu_findNextThreadAndUpdateReadyQueue(Cpu *cpu, bool timesliced);
 void Cpu_setTimesliceTimer(Cpu *cpu);
-void Cpu_schedule(Cpu *cpu);
-void Cpu_exitKernel(Cpu *cpu);
+void Cpu_schedule(Cpu *currentCpu);
 
 #endif

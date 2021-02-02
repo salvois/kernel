@@ -58,7 +58,7 @@ bspHigherHalfEntry:
     movl %edx, CSYMBOL(Boot_mbiPhysicalAddress)
     call CSYMBOL(Boot_entry)
     # Here eax points to the Cpu struct for the bootstrap processor
-    lea CPU_STRUCT_SIZE(%eax), %esp
+    lea CPU_TOP_OF_STACK(%eax), %esp
     call CSYMBOL(Boot_bspEntry)
     # Continue pretending that we are returning from an interrupt
     jmp CSYMBOL(Cpu_returnToUserMode)
@@ -82,7 +82,7 @@ apHigherHalfEntry:
     incl %ecx
     jmp 1b
 2:
-    lea CPU_STRUCT_SIZE(%esi), %esp
+    lea CPU_TOP_OF_STACK(%esi), %esp
     pushl $0
     popf
     call CSYMBOL(Boot_apEntry)

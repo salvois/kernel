@@ -18,6 +18,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #ifndef TEST_HARDWARE_H_INCLUDED
 #define TEST_HARDWARE_H_INCLUDED
 
+#include "stdint.h"
+#include "stdbool.h"
+
 typedef struct FakeHardware {
     Cpu *currentCpu;
     uint32_t lapicIdRegister;
@@ -42,6 +45,7 @@ typedef struct FakeHardware {
     uint64_t msrSysenterCs;
     uint64_t msrSysenterEsp;
     uint64_t msrSysenterEip;
+    bool interruptsEnabled;
 } FakeHardware;
 
 extern FakeHardware theFakeHardware;
@@ -81,6 +85,18 @@ static inline void Cpu_loadLdt(uint32_t value) {
 
 static inline Cpu *Cpu_getCurrent() {
     return theFakeHardware.currentCpu;
+}
+
+static inline uint32_t Cpu_readStackPointer() {
+    return 0xDEADBEEF;
+}
+
+static inline void Cpu_enableInterrupts() {
+    theFakeHardware.interruptsEnabled = true;
+}
+
+static inline void Cpu_disableInterrupts() {
+    theFakeHardware.interruptsEnabled = false;
 }
 
 static inline void AddressSpace_activate(AddressSpace *as) {

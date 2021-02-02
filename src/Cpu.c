@@ -78,52 +78,53 @@ unsigned Cpu_timesliceLengths[NICE_LEVELS] = {
  */
 #define TIMESLICE_TOLERANCE 10000 // 1/100 of a millisecond
 
+void Cpu_logRegisters(Cpu *cpu) {
+    ThreadRegisters *regs = cpu->currentThread->regs;
+    uint32_t stackPointer = Cpu_readStackPointer();
+    uint32_t fs = Cpu_readFs();
+    uint32_t gs = Cpu_readGs();
+    Log_printf("Dump of registers of Cpu 0x%02X (0x%08X) saved at %p\n"
+               "    ldt    0x%08X\n"
+               "    fs     0x%08X\n"
+               "    gs     0x%08X\n"
+               "    es     0x%08X\n"
+               "    ds     0x%08X\n"
+               "    edi    0x%08X\n"
+               "    esi    0x%08X\n"
+               "    ebp    0x%08X\n"
+               "    ebx    0x%08X\n"
+               "    edx    0x%08X\n"
+               "    ecx    0x%08X\n"
+               "    eax    0x%08X\n"
+               "    vector 0x%08X\n"
+               "    error  0x%08X\n"
+               "    eip    0x%08X\n"
+               "    cs     0x%08X\n"
+               "    eflags 0x%08X\n"
+               "    esp    0x%08X\n"
+               "    ss     0x%08X\n"
+               "Current stack pointer=0x%08X, fs=0x%08X, gs=0x%08X, kernelEntryCount=%d.\n",
+            cpu->lapicId, cpu, regs, regs->ldt, regs->fs, regs->gs, regs->es, regs->ds,
+            regs->edi, regs->esi, regs->ebp, regs->ebx, regs->edx, regs->ecx, regs->eax,
+            regs->vector, regs->error, regs->eip, regs->cs, regs->eflags, regs->esp, regs->ss,
+            stackPointer, fs, gs, cpu->kernelEntryCount);
+}
+
 /** Interrupt service routine for CPU exceptions we don't know how to handle. */
 __attribute__((fastcall)) void Cpu_unhandledException(Cpu *cpu, void *param) {
     ThreadRegisters *regs = cpu->currentThread->regs;
     if (regs->vector == 14) {
         Log_printf("Faulting address: %p.\n", Cpu_getFaultingAddress());
     }
-    panic("Unhandled exception %d on CPU 0x%02X, error code=0x%X\n"
-            "  regs=%p\n"
-            "  EAX=0x%08X\n"
-            "  ECX=0x%08X\n"
-            "  EDX=0x%08X\n"
-            "  EBX=0x%08X\n"
-            "  EBP=0x%08X\n"
-            "  ESI=0x%08X\n"
-            "  EDI=0x%08X\n"
-            "  EIP=0x%08X\n"
-            "  CS=0x%04X\n"
-            "  EFLAGS=0x%08X\n"
-            "  ESP=0x%08X\n"
-            "  SS=0x%08X\n"
-            "  DS=0x%08X\n"
-            "  ES=0x%08X\n"
-            "  FS=0x%08X\n"
-            "  GS=0x%08X\n"
-            "System halted.\n",
-            regs->vector, cpu->lapicId, regs->error, regs, regs->eax, regs->ecx, regs->edx, regs->ebx,
-            regs->ebp, regs->esi, regs->edi, regs->eip, regs->cs, regs->eflags, regs->esp, regs->ss, regs->ds, regs->es, regs->fs, regs->gs);
+    Log_printf("Exiting %s on CPU 0x%02X.\n", __func__, cpu->lapicId);
+    Cpu_logRegisters(cpu);
+    panic("Unhandled exception %d on CPU 0x%02X, error code=0x%X. System halted.\n", regs->vector, cpu->lapicId, regs->error);
 }
 
 /** Interrupt service routine for interrupts we don't handle. */
 __attribute__((fastcall)) static void Cpu_doNothingInterrupt(Cpu *cpu, void *param) {
-    ThreadRegisters *regs = cpu->currentThread->regs;
-    Log_printf("Unused interrupt %d on CPU 0x%02X, error code=0x%X\n"
-            "  EAX=0x%08X\n"
-            "  ECX=0x%08X\n"
-            "  EDX=0x%08X\n"
-            "  EBX=0x%08X\n"
-            "  EBP=0x%08X\n"
-            "  ESI=0x%08X\n"
-            "  EDI=0x%08X\n"
-            "  EIP=0x%08X\n"
-            "  CS=0x%04X\n"
-            "  EFLAGS=0x%08X\n"
-            "Continuing.\n",
-            regs->vector, cpu->lapicId, regs->error, regs->eax, regs->ecx, regs->edx, regs->ebx,
-            regs->ebp, regs->esi, regs->edi, regs->eip, regs->cs, regs->eflags);
+    Log_printf("Unused interrupt %d on CPU 0x%02X, error code=0x%X. Continuing...\n, regs->vector, cpu->lapicId");
+    Cpu_logRegisters(cpu);
 }
 
 /**
@@ -272,32 +273,22 @@ void Cpu_setTimesliceTimer(Cpu *cpu) {
  * i5-3570K 8x EndlessLoop 2 CPUs: 588-599 TSC tick per interrupt
  * i5-3570K 8x EndlessLoop 3 CPUs: 641-688 TSC tick per interrupt
  */
-void Cpu_schedule(Cpu *cpu) {
-    Spinlock_lock(&cpu->cpuNode->lock);
-    cpu->rescheduleNeeded = false;
-    bool timesliced = Cpu_accountTimesliceAndCheckExpiration(cpu);
-    Thread *next = Cpu_findNextThreadAndUpdateReadyQueue(cpu, timesliced); // ~35 TSC ticks
-    if (next != cpu->currentThread) {
-        Cpu_switchToThread(cpu, next); // ~200 TSC ticks
-        Cpu_setTimesliceTimer(cpu); // ~15 TSC ticks
+void Cpu_schedule(Cpu *currentCpu) {
+    if (!currentCpu->rescheduleNeeded) return;
+    Spinlock_lock(&currentCpu->cpuNode->lock);
+    currentCpu->rescheduleNeeded = false;
+    bool timesliced = Cpu_accountTimesliceAndCheckExpiration(currentCpu);
+    Thread *next = Cpu_findNextThreadAndUpdateReadyQueue(currentCpu, timesliced); // ~35 TSC ticks
+    if (next != currentCpu->currentThread) {
+        Cpu_switchToThread(currentCpu, next); // ~200 TSC ticks
+        Cpu_setTimesliceTimer(currentCpu); // ~15 TSC ticks
     } else if (timesliced) {
-        Cpu_setTimesliceTimer(cpu);
+        Cpu_setTimesliceTimer(currentCpu);
     }
-    Spinlock_unlock(&cpu->cpuNode->lock);
+    Spinlock_unlock(&currentCpu->cpuNode->lock);
 }
 
-/**
- * Called before exiting the kernel, either after a system call or an interrupt,
- * to reschedule the specified CPU (assumed to be the current CPU) if needed.
- */
-void Cpu_exitKernel(Cpu *cpu) {
-    if (cpu->rescheduleNeeded) {
-        Cpu_schedule(cpu);
-    }
-    //Log_printf("Cpu %d exiting kernel with ThreadRegisters at %p.\n", cpu->lapicId, cpu->currentThread->regs);
-}
-
-static void Cpu_doHandleSysenter(Cpu *currentCpu) {
+static void Cpu_handleSysenter(Cpu *currentCpu) {
     ThreadRegisters *regs = currentCpu->currentThread->regs;
     switch (regs->eax & 0xFF) {
 #if 0
@@ -341,16 +332,15 @@ static void Cpu_doHandleSysenter(Cpu *currentCpu) {
             regs->eax = ENOSYS;
             break;
     }
-    Cpu_exitKernel(currentCpu);
+    Cpu_schedule(currentCpu);
 }
 
-static void Cpu_doHandleInterrupt(Cpu *currentCpu) {
+static void Cpu_handleInterrupt(Cpu *currentCpu) {
     const int logMaxInterruptCount = 12;
     const int maxInterruptCount = 1 << logMaxInterruptCount;
     uint64_t beginTsc = Tsc_read();
     currentCpu->interruptCount++;
-    assert(currentCpu->currentThread->regs->vector < 256);
-    switch (currentCpu->currentThread->regs->vector) {
+    switch (currentCpu->currentThread->regs->vector & THREADREGISTERS_VECTOR_MASK) {
         case lapicTimerVector:
             currentCpu->rescheduleNeeded = true;
             Cpu_writeLocalApic(lapicEoi, 0);
@@ -367,7 +357,7 @@ static void Cpu_doHandleInterrupt(Cpu *currentCpu) {
     //IsrTableEntry *isrTableEntry = &Cpu_isrTable[cpu->currentThread->regs->vector];
     //isrTableEntry->isr(isrTableEntry->param, cpu->currentThread->regs);
     //uint32_t returnSp = (uint32_t) cpu->currentThread->regs + offsetof(ThreadRegisters, es);
-    Cpu_exitKernel(currentCpu); // ~440 TSC ticks
+    Cpu_schedule(currentCpu); // ~440 TSC ticks
     currentCpu->interruptTsc += Tsc_read() - beginTsc;
     if (currentCpu->interruptCount == maxInterruptCount) {
         Video_printf("Cpu %d interrupt TSC=0x%016llX (%d).\n", currentCpu->lapicId, currentCpu->interruptTsc >> logMaxInterruptCount, (int) (currentCpu->interruptTsc >> logMaxInterruptCount));
@@ -378,16 +368,21 @@ static void Cpu_doHandleInterrupt(Cpu *currentCpu) {
 
 /**
  * Dispatches the appropriate interrupt handler or invokes the system call dispatcher.
- * Called in Cpu_asm.S.
- * @param cpu The current CPU.
+ * This is the C entry point of the kernel, called in Cpu_asm.S.
+ * @param currentCpu The current CPU.
  * @return Pointer to the ThreadRegister structure of the thread to resume.
  */
 __attribute__((fastcall)) ThreadRegisters *Cpu_handleSyscallOrInterrupt(Cpu *currentCpu) {
-    unsigned vector = currentCpu->currentThread->regs->vector & THREADREGISTERS_VECTOR_MASK;
-    if (vector == THREADREGISTERS_VECTOR_SYSENTER) {
-        Cpu_doHandleSysenter(currentCpu);
-    } else {
-        Cpu_doHandleInterrupt(currentCpu);
+    while (true) {
+        currentCpu->currentThread->kernelRestartNeeded = false;
+        if (currentCpu->currentThread->regs->vector & THREADREGISTERS_VECTOR_SYSENTER) {
+            Cpu_handleSysenter(currentCpu);
+        } else {
+            Cpu_handleInterrupt(currentCpu);
+        }
+        if (!currentCpu->currentThread->kernelRestartNeeded) break;
+        Cpu_enableInterrupts();
+        Cpu_disableInterrupts();
     }
     return currentCpu->currentThread->regs;
 }

@@ -55,7 +55,7 @@ int Thread_initialize(Task *task, Thread *thread, unsigned priority, unsigned ni
 void Thread_destroy(Thread *thread) {
 }
 
-int Thread_block(Thread *thread, PriorityQueue *queue) {
+int Thread_block(Thread *thread, PriorityQueue *queue, bool kernelRestartNeeded) {
     Cpu *currentCpu = Cpu_getCurrent();
     assert(currentCpu->currentThread == thread);
     assert(thread->state == threadStateRunning);
@@ -63,6 +63,7 @@ int Thread_block(Thread *thread, PriorityQueue *queue) {
     thread->threadQueue = queue;
     PriorityQueue_insert(queue, &thread->queueNode);
     thread->state = threadStateBlocked;
-    Cpu_exitKernel(currentCpu);
+    thread->kernelRestartNeeded = kernelRestartNeeded;
+    Cpu_requestReschedule(currentCpu);
     return 0;
 }

@@ -68,24 +68,24 @@ static void testMultibootModules() {
  */
 __attribute((section(".boot")))
 ThreadRegisters *Boot_bspEntry() {
-    Cpu *cpu = Cpu_getCurrent();
-    Log_printf("Welcome from CPU %d.\n", cpu->index);
-    Cpu_loadCpuTables(cpu);
+    Cpu *currentCpu = Cpu_getCurrent();
+    Log_printf("Welcome from CPU %d.\n", currentCpu->index);
+    Cpu_loadCpuTables(currentCpu);
     AcpiPmTimer_initialize();
     Cpu_setupInterruptDescriptorTable();
-    Log_printf("Enabling LAPIC on bootstrap processor (CPU #%d, LAPIC ID 0x%02X, Cpu struct at %p).\n", cpu->index, cpu->lapicId, cpu);
+    Log_printf("Enabling LAPIC on bootstrap processor (CPU #%d, LAPIC ID 0x%02X, Cpu struct at %p).\n", currentCpu->index, currentCpu->lapicId, currentCpu);
     Cpu_writeLocalApic(lapicSpuriousInterrupt, 0x1FF); // LAPIC enabled, Focus Check disabled, spurious vector 0xFF
     Cpu_startOtherCpus();
     Pic8259_initialize(0x50, 0x70);
     SlabAllocator_initialize(&taskAllocator, sizeof(Task), NULL);
     SlabAllocator_initialize(&threadAllocator, sizeof(Thread), NULL);
     SlabAllocator_initialize(&channelAllocator, sizeof(Channel), NULL);
-    LapicTimer_initialize(&cpu->lapicTimer);
-    Tsc_initialize(&cpu->tsc);
-    waitForAllCpus(cpu);
+    LapicTimer_initialize(&currentCpu->lapicTimer);
+    Tsc_initialize(&currentCpu->tsc);
+    waitForAllCpus(currentCpu);
     testMultibootModules();
-    Cpu_exitKernel(cpu);
-    return cpu->currentThread->regs;
+    Cpu_schedule(currentCpu);
+    return currentCpu->currentThread->regs;
 }
 
 /**
@@ -97,16 +97,16 @@ ThreadRegisters *Boot_bspEntry() {
  */
 __attribute__((section(".boot")))
 ThreadRegisters *Boot_apEntry() {
-    Cpu *cpu = Cpu_getCurrent();
-    Log_printf("Welcome from CPU %d.\n", cpu->index);
-    Cpu_loadCpuTables(cpu);
-    Log_printf("Enabling LAPIC on CPU #%d (LAPIC ID 0x%02X, Cpu struct at %p).\n", cpu->index, cpu->lapicId, cpu);
+    Cpu *currentCpu = Cpu_getCurrent();
+    Log_printf("Welcome from CPU %d.\n", currentCpu->index);
+    Cpu_loadCpuTables(currentCpu);
+    Log_printf("Enabling LAPIC on CPU #%d (LAPIC ID 0x%02X, Cpu struct at %p).\n", currentCpu->index, currentCpu->lapicId, currentCpu);
     Cpu_writeLocalApic(lapicSpuriousInterrupt, 0x1FF); // LAPIC enabled, Focus Check disabled, spurious vector 0xFF
-    LapicTimer_initialize(&cpu->lapicTimer);
-    Tsc_initialize(&cpu->tsc);
-    AtomicWord_set(&cpu->initialized, 1);
-    Cpu_exitKernel(cpu);
-    return cpu->currentThread->regs;
+    LapicTimer_initialize(&currentCpu->lapicTimer);
+    Tsc_initialize(&currentCpu->tsc);
+    AtomicWord_set(&currentCpu->initialized, 1);
+    Cpu_schedule(currentCpu);
+    return currentCpu->currentThread->regs;
 }
 
 /**

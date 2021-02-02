@@ -1,6 +1,6 @@
 /*
 FreeDOS-32 kernel
-Copyright (C) 2008-2018  Salvatore ISAJA
+Copyright (C) 2008-2020  Salvatore ISAJA
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License version 2
@@ -52,9 +52,9 @@ vector = vector + 1
  * The order of pushed registers must be kept consistent with ThreadRegisters.
  */
 commonInterruptTrampoline:
-    testl $3, 12(%esp)
+    testl $3, 12(%esp)  # privilege level of the saved CS
     jnz commonEntry
-    # If we arrive here, we have interrupted a kernel-mode thread.
+    # If we arrive here, we have interrupted a kernel-mode thread or the kernel
     push %eax
     push %ecx
     push %edx
@@ -63,10 +63,13 @@ commonInterruptTrampoline:
     push %esi
     push %edi
     mov %gs:(CPU_THISCPU_OFFSET), %ecx # the cpu argument for Cpu_handleSyscallOrInterrupt()
-    mov CPU_CURRENTTHREAD_OFFSET(%ecx), %edx # pointer to the current thread
+    cmpl $0, CPU_KERNELENTRYCOUNT_OFFSET(%ecx)
+    jne callHandler
+    # Save the pointer to the bottom of the interrupted thread's stack to cpu->currentThread->regs
     lea -THREADREGISTERS_EDI_OFFSET(%esp), %edx # pointer to the beginning of struct ThreadRegisters
-    mov %edx, THREAD_REGS_OFFSET(%edx)
-    jmp callHandler
+    mov CPU_CURRENTTHREAD_OFFSET(%ecx), %eax # pointer to the current thread
+    mov %edx, THREAD_REGS_OFFSET(%eax)
+    jmp switchToKernelStack
 
 /**
  * Entry point for sysenter.
@@ -97,14 +100,20 @@ commonEntry:
     jne customDsEsEntry
     cmp $CPU_FLAT_USER_DS, %ebx
     jne customDsEsEntry
+switchToKernelStack:
+    lea CPU_TOP_OF_STACK(%ecx), %esp
 callHandler:
-    lea CPU_STRUCT_SIZE(%ecx), %esp # top of the kernel stack for the current CPU
+    incl CPU_KERNELENTRYCOUNT_OFFSET(%ecx)
     cld
     call CSYMBOL(Cpu_handleSyscallOrInterrupt)
-/** Returns to user mode, either with sysexit or iret. Besides the surrounding code, this is jumped in by bsp/apHigherHalfEntry in Boot_asm.S. */
+/** Returns to user mode, either with sysexit or iret. Besides the surrounding code, this is jumped in by bsp/apHigherHalfEntry in Boot/entry.S. */
 .global CSYMBOL(Cpu_returnToUserMode)
 CSYMBOL(Cpu_returnToUserMode):
     # Here eax points the ThreadRegisters structure for the (possibly new) current thread
+    mov %esp, %ecx
+    and $~(CPU_STRUCT_SIZE - 1), %ecx # the current Cpu
+    decl CPU_KERNELENTRYCOUNT_OFFSET(%ecx)
+    jnz commonExit
     testl $THREADREGISTERS_VECTOR_CUSTOMDSES, THREADREGISTERS_VECTOR_OFFSET(%eax)
     jnz customDsEsExit
     lea THREADREGISTERS_EDI_OFFSET(%eax), %esp
@@ -116,8 +125,8 @@ commonExit:
     pop %edx
     pop %ecx
     pop %eax
-    cmpl $THREADREGISTERS_VECTOR_SYSENTER, (%esp)
-    jb interruptExit
+    testl $THREADREGISTERS_VECTOR_SYSENTER, (%esp)
+    jz interruptExit
     sti
     sysexit
 interruptExit:
@@ -130,9 +139,8 @@ customDsEsEntry:
     mov $CPU_FLAT_USER_DS, %eax
     mov %eax, %ds
     mov %eax, %es
-    jmp callHandler
+    jmp switchToKernelStack
 customDsEsExit:
-    andl $~THREADREGISTERS_VECTOR_CUSTOMDSES, THREADREGISTERS_VECTOR_OFFSET(%eax)
     lea THREADREGISTERS_ES_OFFSET(%eax), %esp
     pop %es
     pop %ds
